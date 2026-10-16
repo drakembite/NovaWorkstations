@@ -1,0 +1,32 @@
+# Dependencies
+node_modules/
+/.pnp
+.pnp.js
+
+# Next.js
+.next/
+out/
+
+# Database
+data/*.db
+data/*.db*
+data/*.sqlite
+data/*.sqlite3
+
+# Environment variables
+.env*
+!.env.example
+
+# Production / Testing
+/build
+coverage/
+
+# OS / Editor
+.DS_Store
+*.tsbuildinfo
+*.pem
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
