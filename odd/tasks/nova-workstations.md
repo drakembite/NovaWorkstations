@@ -32,13 +32,14 @@
 - [x] `NW-04`: Storefront Layout, custom head script injection, attribution tracker, and static info pages.
   - Route: delegated (6264a17b)
   - Trigger: Writer trigger (layout, navigation, footer, tracker, static pages)
-  - Evidence: Commit 4cd6600 ("feat(storefront): implement layout, attribution tracker, and informational pages")
+  - Evidence: Commit b95e0e6 ("feat(storefront): implement layout, attribution tracker, and informational pages")
   - Checks: Root layout renders, `custom_head_script` injection verified, attribution cookies recorded with legacy fallback, static info pages (`/envios-y-entregas`, `/devoluciones-y-garantia`, `/promociones`) render with 100% test & build pass (`npm test` & `next build`).
 
-- [ ] `NW-05`: Storefront Catalog & Product Detail SSR pages (`/`, `/categoria/[slug]`, `/productos/[slug]`).
-  - Route: delegated
+- [x] `NW-05`: Storefront Catalog & Product Detail SSR pages (`/`, `/categoria/[slug]`, `/productos/[slug]`).
+  - Route: delegated (d13d30f2)
   - Trigger: Writer trigger (home, category, product detail components)
-  - Checks: SSR renders product metadata, specs table, live stock, and inlines `custom_head_jsonld`.
+  - Evidence: Commit 3f2d40f ("feat(storefront): implement catalog, category, and product detail SSR views")
+  - Checks: Home page hero banner, category pills, featured & deals grids, category dynamic SSR with slug normalization & empty states, product detail SSR with breadcrumbs, specs table, live stock, AddToCartButton, and inlined JSON-LD verified with 100% test & build pass (`npm test` & `next build`).
 
 - [ ] `NW-06`: Cart, Coupon Engine & Checkout Flow (`/carrito`, `/checkout`).
   - Route: delegated
