@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "node --test"
+    "test": "tsx scripts/test-db.ts && tsx scripts/test-webhooks.ts",
+    "test:db": "tsx scripts/test-db.ts",
+    "test:webhooks": "tsx scripts/test-webhooks.ts"
   },
   "dependencies": {
     "lucide-react": "^1.16.0",
@@ -24,6 +26,7 @@
     "@types/react-dom": "^19.0.0",
     "postcss": "^8.5.0",
     "tailwindcss": "^4.0.0",
+    "tsx": "^4.23.15",
     "typescript": "^5.7.0"
   }
 }
