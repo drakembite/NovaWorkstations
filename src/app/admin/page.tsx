@@ -197,9 +197,6 @@ export default async function AdminDashboardPage() {
                         src={p.image_url}
                         alt={p.title}
                         className="h-full w-full object-cover"
-                        onError={(e) => {
-                          (e.target as HTMLElement).style.display = 'none';
-                        }}
                       />
                     </div>
                     <div>
