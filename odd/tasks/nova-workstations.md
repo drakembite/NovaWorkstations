@@ -53,9 +53,10 @@
   - Evidence: Commit a882920 ("feat(admin): implement complete admin dashboard, inline editing, refund processing, and settings")
   - Checks: Inline product editing updates `updated_at` and fires webhook; order refund updates order status and fires webhook; settings save; 100% pass across all tests and production build (`npm test` & `next build`).
 
-- [ ] `NW-08`: Verification suite and build validation.
+- [x] `NW-08`: Verification suite and build validation.
   - Route: inline
-  - Checks: Typecheck (`npm run build`), unit/integration tests pass.
+  - Evidence: `npm test` passed 7/7 test suites; `npm run build` compiled 29 static and dynamic routes cleanly.
+  - Checks: Typecheck (`npm run build`) succeeded with 0 errors; full integration suite passed.
 
 ## Engram Mirror
 - Status: Pending (Engram MCP server not detected in current environment).
