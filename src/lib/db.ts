@@ -22,31 +22,51 @@ interface DatabaseData {
   store_settings: StoreSettings;
 }
 
-const DATA_DIR = path.join(process.cwd(), 'data');
+// In serverless environments like Vercel, the project root is read-only.
+// Use /tmp which is writable, or fallback seamlessly to in-memory store.
+const DATA_DIR = process.env.VERCEL
+  ? path.join('/tmp', 'nova-data')
+  : path.join(process.cwd(), 'data');
 const DB_FILE = path.join(DATA_DIR, 'db.json');
+
+let memoryDb: DatabaseData = {
+  products: [...initialProducts],
+  promotions: [...initialPromotions],
+  orders: [],
+  store_settings: { ...initialStoreSettings },
+};
 
 let writeLock: Promise<void> = Promise.resolve();
 
 async function readJsonDb(): Promise<DatabaseData> {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
-  }
-
-  if (!fs.existsSync(DB_FILE)) {
-    const initialData: DatabaseData = {
-      products: [...initialProducts],
-      promotions: [...initialPromotions],
-      orders: [],
-      store_settings: { ...initialStoreSettings },
-    };
-    await fs.promises.writeFile(DB_FILE, JSON.stringify(initialData, null, 2), 'utf8');
-    return initialData;
-  }
-
   try {
+    if (!fs.existsSync(DATA_DIR)) {
+      try {
+        fs.mkdirSync(DATA_DIR, { recursive: true });
+      } catch {
+        return memoryDb;
+      }
+    }
+
+    if (!fs.existsSync(DB_FILE)) {
+      const initialData: DatabaseData = {
+        products: [...initialProducts],
+        promotions: [...initialPromotions],
+        orders: [],
+        store_settings: { ...initialStoreSettings },
+      };
+      try {
+        await fs.promises.writeFile(DB_FILE, JSON.stringify(initialData, null, 2), 'utf8');
+      } catch {
+        // Read-only filesystem, use in-memory store
+      }
+      memoryDb = initialData;
+      return initialData;
+    }
+
     const content = await fs.promises.readFile(DB_FILE, 'utf8');
     if (!content.trim()) {
-      throw new Error('Empty db.json');
+      return memoryDb;
     }
     const data = JSON.parse(content) as DatabaseData;
     let modified = false;
@@ -69,29 +89,32 @@ async function readJsonDb(): Promise<DatabaseData> {
     }
 
     if (modified) {
-      await fs.promises.writeFile(DB_FILE, JSON.stringify(data, null, 2), 'utf8');
+      try {
+        await fs.promises.writeFile(DB_FILE, JSON.stringify(data, null, 2), 'utf8');
+      } catch {
+        // Read-only fallback
+      }
     }
 
+    memoryDb = data;
     return data;
   } catch {
-    const initialData: DatabaseData = {
-      products: [...initialProducts],
-      promotions: [...initialPromotions],
-      orders: [],
-      store_settings: { ...initialStoreSettings },
-    };
-    await fs.promises.writeFile(DB_FILE, JSON.stringify(initialData, null, 2), 'utf8');
-    return initialData;
+    return memoryDb;
   }
 }
 
 async function writeJsonDb(data: DatabaseData): Promise<void> {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
+  memoryDb = data;
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+    const tempFile = `${DB_FILE}.tmp.${Date.now()}.${Math.random().toString(36).slice(2, 8)}`;
+    await fs.promises.writeFile(tempFile, JSON.stringify(data, null, 2), 'utf8');
+    await fs.promises.rename(tempFile, DB_FILE);
+  } catch {
+    // In serverless environments where fs is restricted, memoryDb was already updated
   }
-  const tempFile = `${DB_FILE}.tmp.${Date.now()}.${Math.random().toString(36).slice(2, 8)}`;
-  await fs.promises.writeFile(tempFile, JSON.stringify(data, null, 2), 'utf8');
-  await fs.promises.rename(tempFile, DB_FILE);
 }
 
 async function mutateJsonDb<T>(mutator: (data: DatabaseData) => Promise<T> | T): Promise<T> {
