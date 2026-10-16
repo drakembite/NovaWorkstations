@@ -6,10 +6,16 @@ import { AttributionTracker } from '@/components/AttributionTracker';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://planiaula.com';
+
 export const metadata: Metadata = {
-  title: 'NovaWorkstations | Hardware Profesional para Creadores e Ingenieros',
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: 'NovaWorkstations | Hardware Profesional para Creadores e Ingenieros',
+    template: '%s | NovaWorkstations',
+  },
   description:
-    'Estaciones de trabajo de alto rendimiento, componentes y monitores de grado profesional con despacho en 24h en Lima y envíos a todo el Perú.',
+    'Estaciones de trabajo de alto rendimiento, componentes, laptops para arquitectura y monitores 4K de grado profesional. Despacho en 24h en Lima y envíos a todo el Perú.',
   keywords: [
     'NovaWorkstations',
     'workstations',
@@ -18,12 +24,49 @@ export const metadata: Metadata = {
     'monitores 4K',
     'render 3D',
     'estaciones de trabajo',
-    'Lima Perú',
+    'diseño y arquitectura',
+    'tienda hardware Lima Perú',
   ],
   authors: [{ name: 'NovaWorkstations' }],
+  creator: 'NovaWorkstations',
+  publisher: 'NovaWorkstations',
+  alternates: {
+    canonical: '/',
+  },
+  openGraph: {
+    type: 'website',
+    locale: 'es_PE',
+    url: siteUrl,
+    siteName: 'NovaWorkstations',
+    title: 'NovaWorkstations | Hardware Profesional para Creadores e Ingenieros',
+    description:
+      'Estaciones de trabajo de alto rendimiento, laptops para arquitectura y monitores 4K de grado profesional con entrega en 24h.',
+    images: [
+      {
+        url: 'https://images.unsplash.com/photo-1593642632823-8f785ba67e45?auto=format&fit=crop&w=1200&h=630&q=80',
+        width: 1200,
+        height: 630,
+        alt: 'NovaWorkstations Catálogo de Hardware Profesional',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'NovaWorkstations | Hardware Profesional',
+    description:
+      'Estaciones de trabajo portátiles, monitores 4K y equipamiento para creación y diseño.',
+    images: ['https://images.unsplash.com/photo-1593642632823-8f785ba67e45?auto=format&fit=crop&w=1200&h=630&q=80'],
+  },
   robots: {
     index: true,
     follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
   },
 };
 
@@ -44,6 +87,32 @@ export default async function RootLayout({
     <html lang="es" className="dark scroll-smooth">
       <head>
         <CustomHeadScript script={customHeadScript} />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'ComputerStore',
+              name: 'NovaWorkstations',
+              url: siteUrl,
+              description:
+                'Tienda de comercio electrónico especializada en estaciones de trabajo portátiles, monitores profesionales y equipamiento de hardware para arquitectura, ingeniería y creación audiovisual.',
+              currenciesAccepted: 'USD',
+              paymentAccepted: 'Credit Card, Debit Card, Wire Transfer',
+              priceRange: '$$$',
+              address: {
+                '@type': 'PostalAddress',
+                addressLocality: 'Lima',
+                addressCountry: 'PE',
+              },
+              potentialAction: {
+                '@type': 'SearchAction',
+                target: `${siteUrl}/categoria/estaciones-de-trabajo`,
+                'query-input': 'required name=search_term_string',
+              },
+            }),
+          }}
+        />
       </head>
       <body className="flex min-h-screen flex-col bg-slate-950 font-sans text-slate-100 antialiased selection:bg-cyan-500 selection:text-slate-950">
         <AttributionTracker />

@@ -106,10 +106,13 @@ async function testLayoutAndInfo() {
   console.log('\n--- Test 3: Root Layout & Metadata ---');
   {
     const { metadata: layoutMeta } = await import('../src/app/layout');
-    assert.ok(layoutMeta.title, 'Root layout must have title');
+    const titleStr =
+      typeof layoutMeta.title === 'string'
+        ? layoutMeta.title
+        : (layoutMeta.title as any)?.default || JSON.stringify(layoutMeta.title);
     assert.ok(
-      String(layoutMeta.title).includes('NovaWorkstations'),
-      `Title should contain NovaWorkstations, got: ${layoutMeta.title}`
+      titleStr.includes('NovaWorkstations'),
+      `Title should contain NovaWorkstations, got: ${titleStr}`
     );
     assert.ok(layoutMeta.description, 'Root layout must have description');
 
