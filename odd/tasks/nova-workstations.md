@@ -44,7 +44,7 @@
 - [x] `NW-06`: Cart, Coupon Engine & Checkout Flow (`/carrito`, `/checkout`).
   - Route: delegated (cd4a24af)
   - Trigger: Writer trigger (cart context, coupon validation, checkout submission, order creation)
-  - Evidence: Commit ccf5dd8 ("feat(checkout): implement persistent cart, coupon validation, and 1-click checkout")
+  - Evidence: Commit 7f50cbf ("feat(checkout): implement persistent cart, coupon validation, and 1-click checkout")
   - Checks: Persistent cart items with cookie sync, coupon validation endpoint with min purchase & category constraints, 1-click checkout creating paid order with silent attribution fallback (`npm test` & `next build` 100% pass).
 
 - [ ] `NW-07`: Admin Panel (`/admin`, `/admin/productos`, `/admin/promociones`, `/admin/pedidos`, `/admin/ajustes`).
