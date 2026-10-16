@@ -7,13 +7,14 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "tsx scripts/test-db.ts && tsx scripts/test-webhooks.ts && tsx scripts/test-endpoints.ts && tsx scripts/test-layout-info.ts && tsx scripts/test-catalog-ssr.ts && tsx scripts/test-cart-checkout.ts",
+    "test": "tsx scripts/test-db.ts && tsx scripts/test-webhooks.ts && tsx scripts/test-endpoints.ts && tsx scripts/test-layout-info.ts && tsx scripts/test-catalog-ssr.ts && tsx scripts/test-cart-checkout.ts && tsx scripts/test-admin.ts",
     "test:db": "tsx scripts/test-db.ts",
     "test:webhooks": "tsx scripts/test-webhooks.ts",
     "test:endpoints": "tsx scripts/test-endpoints.ts",
     "test:layout-info": "tsx scripts/test-layout-info.ts",
     "test:catalog": "tsx scripts/test-catalog-ssr.ts",
-    "test:checkout": "tsx scripts/test-cart-checkout.ts"
+    "test:checkout": "tsx scripts/test-cart-checkout.ts",
+    "test:admin": "tsx scripts/test-admin.ts"
   },
   "dependencies": {
     "lucide-react": "^1.16.0",

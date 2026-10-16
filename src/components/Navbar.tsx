@@ -43,6 +43,11 @@ export function Navbar() {
     return () => unsubscribe();
   }, []);
 
+  // Hide public navbar on admin pages
+  if (pathname?.startsWith('/admin')) {
+    return null;
+  }
+
   // Close mobile menu on route change
   useEffect(() => {
     setMobileMenuOpen(false);
