@@ -38,13 +38,14 @@
 - [x] `NW-05`: Storefront Catalog & Product Detail SSR pages (`/`, `/categoria/[slug]`, `/productos/[slug]`).
   - Route: delegated (d13d30f2)
   - Trigger: Writer trigger (home, category, product detail components)
-  - Evidence: Commit 3f2d40f ("feat(storefront): implement catalog, category, and product detail SSR views")
+  - Evidence: Commit 99990f0 ("feat(storefront): implement catalog, category, and product detail SSR views")
   - Checks: Home page hero banner, category pills, featured & deals grids, category dynamic SSR with slug normalization & empty states, product detail SSR with breadcrumbs, specs table, live stock, AddToCartButton, and inlined JSON-LD verified with 100% test & build pass (`npm test` & `next build`).
 
-- [ ] `NW-06`: Cart, Coupon Engine & Checkout Flow (`/carrito`, `/checkout`).
-  - Route: delegated
+- [x] `NW-06`: Cart, Coupon Engine & Checkout Flow (`/carrito`, `/checkout`).
+  - Route: delegated (cd4a24af)
   - Trigger: Writer trigger (cart context, coupon validation, checkout submission, order creation)
-  - Checks: Persistent cart items, coupon validation applies discounts, 1-click checkout creates `paid` order with attribution data.
+  - Evidence: Commit ccf5dd8 ("feat(checkout): implement persistent cart, coupon validation, and 1-click checkout")
+  - Checks: Persistent cart items with cookie sync, coupon validation endpoint with min purchase & category constraints, 1-click checkout creating paid order with silent attribution fallback (`npm test` & `next build` 100% pass).
 
 - [ ] `NW-07`: Admin Panel (`/admin`, `/admin/productos`, `/admin/promociones`, `/admin/pedidos`, `/admin/ajustes`).
   - Route: delegated

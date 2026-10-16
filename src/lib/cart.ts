@@ -11,16 +11,41 @@ export interface CartItem {
 
 const CART_STORAGE_KEY = 'nw_cart';
 const CART_EVENT_NAME = 'nw_cart_updated';
+const COUPON_STORAGE_KEY = 'nw_applied_coupon';
+
+export function getCartFromCookies(cookieHeader?: string): CartItem[] {
+  const cookiesStr =
+    cookieHeader ?? (typeof document !== 'undefined' ? document.cookie : '');
+  if (!cookiesStr) return [];
+  const cookies = cookiesStr.split(';').map((c) => c.trim());
+  for (const name of [CART_STORAGE_KEY, 'vs_cart']) {
+    const prefix = `${name}=`;
+    const found = cookies.find((c) => c.startsWith(prefix));
+    if (found) {
+      const rawValue = found.substring(prefix.length);
+      try {
+        const decoded = decodeURIComponent(rawValue);
+        const parsed = JSON.parse(decoded);
+        if (Array.isArray(parsed)) return parsed;
+      } catch {
+        // ignore
+      }
+    }
+  }
+  return [];
+}
 
 export function getCart(): CartItem[] {
   if (typeof window === 'undefined') return [];
   try {
     const raw = localStorage.getItem(CART_STORAGE_KEY) || localStorage.getItem('vs_cart');
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+    return getCartFromCookies();
   } catch {
-    return [];
+    return getCartFromCookies();
   }
 }
 
@@ -35,6 +60,13 @@ export function saveCart(items: CartItem[]): void {
     const serialized = JSON.stringify(items);
     localStorage.setItem(CART_STORAGE_KEY, serialized);
     localStorage.setItem('vs_cart', serialized);
+
+    // Synchronize to cookies for SSR & persistence
+    const encoded = encodeURIComponent(serialized);
+    const expires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toUTCString();
+    document.cookie = `${CART_STORAGE_KEY}=${encoded}; expires=${expires}; path=/; SameSite=Lax`;
+    document.cookie = `vs_cart=${encoded}; expires=${expires}; path=/; SameSite=Lax`;
+
     window.dispatchEvent(new CustomEvent(CART_EVENT_NAME, { detail: items }));
   } catch (err) {
     console.warn('[Cart] Failed to save cart:', err);
@@ -79,7 +111,58 @@ export function removeFromCart(sku: string): CartItem[] {
 }
 
 export function clearCart(): void {
-  saveCart([]);
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.removeItem(CART_STORAGE_KEY);
+      localStorage.removeItem('vs_cart');
+      localStorage.removeItem(COUPON_STORAGE_KEY);
+      localStorage.removeItem('vs_coupon');
+      document.cookie = `${CART_STORAGE_KEY}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Lax`;
+      document.cookie = `vs_cart=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Lax`;
+      document.cookie = `${COUPON_STORAGE_KEY}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Lax`;
+      document.cookie = `vs_coupon=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Lax`;
+    } catch {}
+    window.dispatchEvent(new CustomEvent(CART_EVENT_NAME, { detail: [] }));
+  }
+}
+
+export function getAppliedCoupon(): string | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const fromStorage = localStorage.getItem(COUPON_STORAGE_KEY) || localStorage.getItem('vs_coupon');
+    if (fromStorage) return fromStorage;
+
+    const cookies = document.cookie.split(';').map((c) => c.trim());
+    for (const name of [COUPON_STORAGE_KEY, 'vs_coupon']) {
+      const prefix = `${name}=`;
+      const found = cookies.find((c) => c.startsWith(prefix));
+      if (found) {
+        return decodeURIComponent(found.substring(prefix.length));
+      }
+    }
+  } catch {}
+  return null;
+}
+
+export function saveAppliedCoupon(code: string | null): void {
+  if (typeof window === 'undefined') return;
+  try {
+    if (!code) {
+      localStorage.removeItem(COUPON_STORAGE_KEY);
+      localStorage.removeItem('vs_coupon');
+      document.cookie = `${COUPON_STORAGE_KEY}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Lax`;
+      document.cookie = `vs_coupon=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Lax`;
+    } else {
+      const normalized = code.trim().toUpperCase();
+      localStorage.setItem(COUPON_STORAGE_KEY, normalized);
+      localStorage.setItem('vs_coupon', normalized);
+      const expires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toUTCString();
+      document.cookie = `${COUPON_STORAGE_KEY}=${encodeURIComponent(normalized)}; expires=${expires}; path=/; SameSite=Lax`;
+      document.cookie = `vs_coupon=${encodeURIComponent(normalized)}; expires=${expires}; path=/; SameSite=Lax`;
+    }
+  } catch (err) {
+    console.warn('[Cart] Failed to save applied coupon:', err);
+  }
 }
 
 export function subscribeToCartUpdates(callback: (items: CartItem[]) => void): () => void {
