@@ -47,10 +47,11 @@
   - Evidence: Commit 7f50cbf ("feat(checkout): implement persistent cart, coupon validation, and 1-click checkout")
   - Checks: Persistent cart items with cookie sync, coupon validation endpoint with min purchase & category constraints, 1-click checkout creating paid order with silent attribution fallback (`npm test` & `next build` 100% pass).
 
-- [ ] `NW-07`: Admin Panel (`/admin`, `/admin/productos`, `/admin/promociones`, `/admin/pedidos`, `/admin/ajustes`).
-  - Route: delegated
+- [x] `NW-07`: Admin Panel (`/admin`, `/admin/productos`, `/admin/promociones`, `/admin/pedidos`, `/admin/ajustes`).
+  - Route: delegated (57d9894a)
   - Trigger: Writer trigger (admin layout, inline editor, coupon manager, refund processor, webhooks & settings)
-  - Checks: Inline product editing updates `updated_at` and fires webhook; order refund updates order status and fires webhook; settings save.
+  - Evidence: Commit a882920 ("feat(admin): implement complete admin dashboard, inline editing, refund processing, and settings")
+  - Checks: Inline product editing updates `updated_at` and fires webhook; order refund updates order status and fires webhook; settings save; 100% pass across all tests and production build (`npm test` & `next build`).
 
 - [ ] `NW-08`: Verification suite and build validation.
   - Route: inline
