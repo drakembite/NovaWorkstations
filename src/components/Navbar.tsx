@@ -8,11 +8,8 @@ import {
   Menu,
   X,
   Cpu,
-  ShieldAlert,
   Tag,
   Truck,
-  Sparkles,
-  ShieldCheck,
   ChevronRight,
 } from 'lucide-react';
 import { getCartCount, subscribeToCartUpdates } from '@/lib/cart';
@@ -43,15 +40,15 @@ export function Navbar() {
     return () => unsubscribe();
   }, []);
 
-  // Hide public navbar on admin pages
-  if (pathname?.startsWith('/admin')) {
-    return null;
-  }
-
   // Close mobile menu on route change
   useEffect(() => {
     setMobileMenuOpen(false);
   }, [pathname]);
+
+  // Hide public navbar on admin pages
+  if (pathname?.startsWith('/admin')) {
+    return null;
+  }
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-slate-800 bg-slate-950/95 backdrop-blur-md text-slate-100">
@@ -113,16 +110,8 @@ export function Navbar() {
           })}
         </nav>
 
-        {/* Right Action Icons: Admin Link & Cart Button */}
+        {/* Right Action Icons: Cart Button & Mobile Menu */}
         <div className="flex items-center gap-2.5 sm:gap-4">
-          <Link
-            href="/admin"
-            className="hidden sm:inline-flex items-center gap-1.5 rounded-lg border border-slate-700/80 bg-slate-900/80 px-3 py-1.5 text-xs font-semibold text-slate-300 hover:border-slate-600 hover:text-white hover:bg-slate-800 transition-all shadow-sm"
-          >
-            <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
-            <span>Admin</span>
-          </Link>
-
           <Link
             href="/carrito"
             aria-label="Ver carrito de compras"
@@ -177,19 +166,6 @@ export function Navbar() {
                 </Link>
               );
             })}
-
-            <div className="pt-3 mt-2 border-t border-slate-800/80">
-              <Link
-                href="/admin"
-                className="flex items-center justify-between rounded-lg px-3.5 py-2.5 text-base font-medium text-slate-300 hover:bg-slate-900 hover:text-white"
-              >
-                <span className="flex items-center gap-2">
-                  <ShieldCheck className="h-4 w-4 text-emerald-400" />
-                  Panel de Administración
-                </span>
-                <ChevronRight className="h-4 w-4 text-slate-500" />
-              </Link>
-            </div>
           </div>
         </div>
       )}

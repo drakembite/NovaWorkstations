@@ -15,6 +15,8 @@ import {
   Cpu,
   ShieldCheck,
   ChevronRight,
+  LogOut,
+  Loader2,
 } from 'lucide-react';
 
 interface NavItem {
@@ -35,6 +37,23 @@ const NAV_ITEMS: NavItem[] = [
 export function AdminLayoutClient({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  // If on login page, render children without sidebar or admin shell
+  if (pathname === '/admin/login' || pathname?.startsWith('/admin/login')) {
+    return <>{children}</>;
+  }
+
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      await fetch('/api/admin/auth/logout', { method: 'POST' });
+    } catch (err) {
+      console.error('Logout error:', err);
+    } finally {
+      window.location.href = '/admin/login';
+    }
+  };
 
   const isActive = (item: NavItem) => {
     if (item.exact) {
@@ -122,8 +141,8 @@ export function AdminLayoutClient({ children }: { children: React.ReactNode }) {
           })}
         </nav>
 
-        {/* Bottom Section: Ver Tienda Pública Button */}
-        <div className="border-t border-slate-800 p-4">
+        {/* Bottom Section: Ver Tienda Pública & Cerrar Sesión */}
+        <div className="border-t border-slate-800 p-4 space-y-2">
           <Link
             href="/"
             className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-700/80 bg-slate-800/70 px-4 py-2.5 text-xs font-semibold text-slate-200 transition-all hover:border-cyan-500/50 hover:bg-slate-800 hover:text-white"
@@ -131,7 +150,22 @@ export function AdminLayoutClient({ children }: { children: React.ReactNode }) {
             <span>Ver Tienda Pública</span>
             <ExternalLink className="h-3.5 w-3.5 text-cyan-400" />
           </Link>
-          <div className="mt-3 flex items-center justify-center gap-2 text-[11px] text-slate-500">
+
+          <button
+            type="button"
+            onClick={handleLogout}
+            disabled={isLoggingOut}
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-2.5 text-xs font-semibold text-rose-300 transition-all hover:bg-rose-500/20 hover:text-rose-200 disabled:opacity-50"
+          >
+            {isLoggingOut ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin text-rose-400" />
+            ) : (
+              <LogOut className="h-3.5 w-3.5 text-rose-400" />
+            )}
+            <span>{isLoggingOut ? 'Cerrando sesión...' : 'Cerrar Sesión'}</span>
+          </button>
+
+          <div className="mt-2 flex items-center justify-center gap-2 text-[11px] text-slate-500">
             <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
             <span>Sistema Operativo</span>
           </div>
@@ -156,7 +190,7 @@ export function AdminLayoutClient({ children }: { children: React.ReactNode }) {
             </h1>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <Link
               href="/"
               className="inline-flex lg:hidden items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800/80 px-2.5 py-1.5 text-xs font-medium text-slate-300 hover:text-white"
@@ -164,6 +198,16 @@ export function AdminLayoutClient({ children }: { children: React.ReactNode }) {
               <span>Tienda</span>
               <ExternalLink className="h-3 w-3 text-cyan-400" />
             </Link>
+            <button
+              type="button"
+              onClick={handleLogout}
+              disabled={isLoggingOut}
+              className="inline-flex lg:hidden items-center gap-1 rounded-lg border border-rose-500/30 bg-rose-500/10 px-2.5 py-1.5 text-xs font-semibold text-rose-300 hover:bg-rose-500/20"
+              title="Cerrar Sesión"
+            >
+              <LogOut className="h-3 w-3 text-rose-400" />
+              <span className="hidden xs:inline">Salir</span>
+            </button>
           </div>
         </header>
 

@@ -355,13 +355,6 @@ export function CheckoutView() {
                 <Home className="h-4 w-4" />
                 <span>Volver a la Tienda</span>
               </Link>
-              <Link
-                href="/admin"
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-6 py-3.5 text-sm font-semibold text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
-              >
-                <ShieldCheck className="h-4 w-4 text-emerald-400" />
-                <span>Ver en Panel de Administración</span>
-              </Link>
             </div>
           </div>
         </div>

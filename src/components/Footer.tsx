@@ -222,15 +222,6 @@ export function Footer() {
             <ul className="mt-4 space-y-2.5 text-sm">
               <li>
                 <Link
-                  href="/admin"
-                  className="inline-flex items-center gap-1.5 font-medium text-slate-300 transition-colors hover:text-white"
-                >
-                  <ShieldCheck className="h-4 w-4 text-emerald-400" />
-                  <span>Panel de Control</span>
-                </Link>
-              </li>
-              <li>
-                <Link
                   href="/carrito"
                   className="transition-colors hover:text-cyan-400"
                 >
