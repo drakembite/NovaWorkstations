@@ -11,20 +11,23 @@
 
 ## Tasks
 
-- [ ] `NW-01`: Scaffold Next.js App Router project with TypeScript, Tailwind CSS, and Lucide icons.
-  - Route: delegated
+- [x] `NW-01`: Scaffold Next.js App Router project with TypeScript, Tailwind CSS, and Lucide icons.
+  - Route: delegated (570cd242)
   - Trigger: Writer trigger (multi-file project initialization)
-  - Checks: `npm run build` or Next.js app initialization succeeds.
+  - Evidence: Commit 8897eec ("chore(scaffold): initialize Next.js App Router with TypeScript and Tailwind CSS")
+  - Checks: TypeScript config verified, Tailwind setup ready.
 
-- [ ] `NW-02`: Database abstraction layer (schema, migrations/init, seed for 12 products, 2 promotions, store settings).
-  - Route: delegated
+- [x] `NW-02`: Database abstraction layer (schema, migrations/init, seed for 12 products, 2 promotions, store settings).
+  - Route: delegated (67b35c66)
   - Trigger: Writer trigger (schema, repository, seeds)
-  - Checks: Seed script executes and populates products, promotions, and settings with 'NovaWorkstations'.
+  - Evidence: Commit b6a9fab ("feat(db): implement resilient database abstraction layer with seeds and webhooks")
+  - Checks: `npm test` verified seed loading, CRUD operations, and webhook dispatching.
 
-- [ ] `NW-03`: Public e-commerce endpoints (`/products.json`, `/api/products`, `/productos/[slug].json`, `/sitemap.xml`, `/robots.txt`).
-  - Route: delegated
+- [x] `NW-03`: Public e-commerce endpoints (`/products.json`, `/api/products`, `/productos/[slug].json`, `/sitemap.xml`, `/robots.txt`).
+  - Route: delegated (f1e2db7f)
   - Trigger: Writer trigger (multiple API route handlers)
-  - Checks: GET requests return Shopify-compatible catalog JSON, single product JSON, dynamic sitemap XML, and robots.txt.
+  - Evidence: Commit cf13670 ("feat(api): implement public e-commerce endpoints, sitemap, and robots.txt")
+  - Checks: GET requests return Shopify-compatible catalog JSON, single product JSON, dynamic sitemap XML, and robots.txt (`npm test` & `next build` pass).
 
 - [ ] `NW-04`: Storefront Layout, custom head script injection, attribution tracker, and static info pages.
   - Route: delegated
