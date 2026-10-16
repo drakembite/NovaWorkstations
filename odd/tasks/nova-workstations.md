@@ -26,13 +26,14 @@
 - [x] `NW-03`: Public e-commerce endpoints (`/products.json`, `/api/products`, `/productos/[slug].json`, `/sitemap.xml`, `/robots.txt`).
   - Route: delegated (f1e2db7f)
   - Trigger: Writer trigger (multiple API route handlers)
-  - Evidence: Commit cf13670 ("feat(api): implement public e-commerce endpoints, sitemap, and robots.txt")
+  - Evidence: Commit 686861e ("feat(api): implement public e-commerce endpoints, sitemap, and robots.txt")
   - Checks: GET requests return Shopify-compatible catalog JSON, single product JSON, dynamic sitemap XML, and robots.txt (`npm test` & `next build` pass).
 
-- [ ] `NW-04`: Storefront Layout, custom head script injection, attribution tracker, and static info pages.
-  - Route: delegated
+- [x] `NW-04`: Storefront Layout, custom head script injection, attribution tracker, and static info pages.
+  - Route: delegated (6264a17b)
   - Trigger: Writer trigger (layout, navigation, footer, tracker, static pages)
-  - Checks: Root layout renders, `custom_head_script` is injected, attribution cookie is recorded, info pages load.
+  - Evidence: Commit 4cd6600 ("feat(storefront): implement layout, attribution tracker, and informational pages")
+  - Checks: Root layout renders, `custom_head_script` injection verified, attribution cookies recorded with legacy fallback, static info pages (`/envios-y-entregas`, `/devoluciones-y-garantia`, `/promociones`) render with 100% test & build pass (`npm test` & `next build`).
 
 - [ ] `NW-05`: Storefront Catalog & Product Detail SSR pages (`/`, `/categoria/[slug]`, `/productos/[slug]`).
   - Route: delegated

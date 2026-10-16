@@ -7,10 +7,11 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "tsx scripts/test-db.ts && tsx scripts/test-webhooks.ts && tsx scripts/test-endpoints.ts",
+    "test": "tsx scripts/test-db.ts && tsx scripts/test-webhooks.ts && tsx scripts/test-endpoints.ts && tsx scripts/test-layout-info.ts",
     "test:db": "tsx scripts/test-db.ts",
     "test:webhooks": "tsx scripts/test-webhooks.ts",
-    "test:endpoints": "tsx scripts/test-endpoints.ts"
+    "test:endpoints": "tsx scripts/test-endpoints.ts",
+    "test:layout-info": "tsx scripts/test-layout-info.ts"
   },
   "dependencies": {
     "lucide-react": "^1.16.0",
