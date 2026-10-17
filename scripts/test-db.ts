@@ -10,10 +10,6 @@ import {
   getPromotionByCode,
   createPromotion,
   togglePromotion,
-  getOrders,
-  getOrderById,
-  createOrder,
-  refundOrder,
   getStoreSettings,
   updateStoreSettings,
 } from '../src/lib/db';
@@ -105,59 +101,8 @@ async function runTests() {
   assert.strictEqual(updatedSettings.custom_head_script, '<!-- test script -->');
   console.log(`✅ Updated store settings: custom_head_script set`);
 
-  // 7. Orders & Refund
-  console.log('\n--- Test 7: Orders & Refund flow ---');
-  const order = await createOrder({
-    customer_name: 'John Doe',
-    customer_email: 'john@example.com',
-    shipping_city: 'Lima',
-    shipping_address: 'Av. Javier Prado 1234',
-    status: 'paid',
-    subtotal_amount: 1650.0,
-    discount_amount: 165.0,
-    shipping_amount: 0,
-    total_paid_amount: 1485.0,
-    refunded_amount: 0,
-    coupon_code_used: 'ESTUDIO10',
-    items_json: [
-      {
-        sku: 'VS-ASUS-H7604',
-        quantity: 1,
-        unit_price: 1650.0,
-        title: 'Laptop Asus ProArt Studiobook 16 OLED',
-      },
-    ],
-    attribution_data: {
-      utm_source: 'google',
-      utm_medium: 'cpc',
-      referrer: 'https://google.com',
-    },
-  });
-
-  assert.ok(order.id, 'Order id generated');
-  assert.ok(order.order_number >= 1001, 'Order number generated');
-  assert.strictEqual(order.status, 'paid');
-  console.log(`✅ Created order #${order.order_number} (${order.id}) for $${order.total_paid_amount}`);
-
-  const fetchedOrder = await getOrderById(order.id);
-  assert.strictEqual(fetchedOrder?.id, order.id);
-  console.log(`✅ getOrderById retrieved order #${fetchedOrder?.order_number}`);
-
-  // Partial refund test
-  const partialRefund = await refundOrder(order.id, 485.0);
-  assert.strictEqual(partialRefund?.status, 'partially_refunded');
-  assert.strictEqual(partialRefund?.refunded_amount, 485.0);
-  assert.ok(partialRefund?.refunded_at, 'refunded_at must be populated');
-  console.log(`✅ Processed partial refund of $485.00: status=${partialRefund?.status}`);
-
-  // Complete refund test
-  const fullRefund = await refundOrder(order.id, 1000.0);
-  assert.strictEqual(fullRefund?.status, 'refunded');
-  assert.strictEqual(fullRefund?.refunded_amount, 1485.0);
-  console.log(`✅ Processed full refund: status=${fullRefund?.status}, refunded_amount=$${fullRefund?.refunded_amount}`);
-
-  // 8. Verify db.json file exists
-  console.log('\n--- Test 8: Physical DB file check ---');
+  // 7. Verify db.json file exists
+  console.log('\n--- Test 7: Physical DB file check ---');
   const dbFile = path.join(process.cwd(), 'data', 'db.json');
   assert.ok(fs.existsSync(dbFile), 'data/db.json should exist');
   const fileContent = fs.readFileSync(dbFile, 'utf8');

@@ -11,10 +11,6 @@ export async function triggerWebhook(
 
     if (event === 'product.updated') {
       url = settings.webhook_url_product_updated;
-    } else if (event === 'order.paid') {
-      url = settings.webhook_url_order_paid;
-    } else if (event === 'order.refunded') {
-      url = settings.webhook_url_order_refunded;
     }
 
     if (!url || typeof url !== 'string' || !url.trim()) {
@@ -24,40 +20,19 @@ export async function triggerWebhook(
     // Format body conforming to spec if not already formatted
     let body: any = payload;
     if (!payload.event) {
-      if (event === 'product.updated') {
-        body = {
-          event: 'product.updated',
-          timestamp: new Date().toISOString(),
-          product: {
-            id: payload.id,
-            sku: payload.sku,
-            slug: payload.slug,
-            price: payload.price,
-            stock_quantity: payload.stock_quantity,
-            short_description: payload.short_description,
-            updated_at: payload.updated_at,
-          },
-        };
-      } else {
-        body = {
-          event,
-          timestamp: new Date().toISOString(),
-          order: {
-            id: payload.id,
-            order_number: payload.order_number,
-            status: payload.status,
-            total_paid_amount: payload.total_paid_amount,
-            refunded_amount: payload.refunded_amount,
-            coupon_code_used: payload.coupon_code_used,
-            items: (payload.items_json || payload.items || []).map((item: any) => ({
-              sku: item.sku,
-              quantity: item.quantity,
-              unit_price: item.unit_price,
-            })),
-            attribution_data: payload.attribution_data || {},
-          },
-        };
-      }
+      body = {
+        event: 'product.updated',
+        timestamp: new Date().toISOString(),
+        product: {
+          id: payload.id,
+          sku: payload.sku,
+          slug: payload.slug,
+          price: payload.price,
+          stock_quantity: payload.stock_quantity,
+          short_description: payload.short_description,
+          updated_at: payload.updated_at,
+        },
+      };
     }
 
     const response = await fetch(url, {

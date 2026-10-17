@@ -7,7 +7,6 @@ import {
   LayoutDashboard,
   Package,
   Tag,
-  ShoppingBag,
   Settings,
   ExternalLink,
   Menu,
@@ -30,7 +29,6 @@ const NAV_ITEMS: NavItem[] = [
   { name: 'Resumen', href: '/admin', icon: LayoutDashboard, exact: true },
   { name: 'Productos', href: '/admin/productos', icon: Package },
   { name: 'Promociones', href: '/admin/promociones', icon: Tag },
-  { name: 'Pedidos', href: '/admin/pedidos', icon: ShoppingBag },
   { name: 'Ajustes', href: '/admin/ajustes', icon: Settings },
 ];
 

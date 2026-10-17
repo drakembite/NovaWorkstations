@@ -80,7 +80,7 @@ export default function AdminLoginPage() {
             <span>Acceso Administrativo</span>
           </div>
           <p className="mt-3 text-xs text-slate-400 max-w-xs mx-auto">
-            Ingresa tus credenciales autorizadas para gestionar el inventario, pedidos y promociones.
+            Ingresa tus credenciales autorizadas para gestionar el inventario, los enlaces de compra y las promociones.
           </p>
         </div>
 

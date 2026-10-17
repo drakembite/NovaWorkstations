@@ -172,7 +172,7 @@ export default async function PromocionesPage() {
         <section className="mt-14 rounded-2xl border border-slate-800 bg-slate-900/30 p-6 sm:p-8">
           <h3 className="text-base font-bold text-white mb-3">Términos y Condiciones de Cupones</h3>
           <ul className="list-disc list-inside space-y-2 text-xs text-slate-400">
-            <li>Los cupones deben introducirse en el campo &quot;Cupón de Descuento&quot; en la página del carrito antes de finalizar la orden.</li>
+            <li>Esta es una tienda de demostración: los cupones se publican solo como información y no se pueden canjear aquí.</li>
             <li>No son transferibles a dinero en efectivo ni acumulables entre sí en una misma transacción.</li>
             <li>El descuento se aplica sobre el subtotal de los productos aplicables, no sobre el costo de flete.</li>
             <li>NovaWorkstations se reserva el derecho de dar por concluida una campaña anticipadamente en caso de agotamiento de inventario.</li>

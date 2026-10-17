@@ -55,6 +55,7 @@ export interface Promotion {
   created_at: string;
 }
 
+// Legacy order shapes: the order flow was removed, stored rows are kept untouched.
 export type OrderStatus = 'paid' | 'partially_refunded' | 'refunded';
 
 export interface OrderItem {
@@ -84,6 +85,7 @@ export interface Order {
   refunded_at: string | null;
 }
 
+/** The order webhook columns are legacy: no longer used or shown, but never dropped. */
 export interface StoreSettings {
   id: number;
   store_name: string;
@@ -94,7 +96,7 @@ export interface StoreSettings {
   updated_at: string;
 }
 
-export type WebhookEvent = 'product.updated' | 'order.paid' | 'order.refunded';
+export type WebhookEvent = 'product.updated';
 
 export interface WebhookProductPayload {
   event: 'product.updated';
@@ -110,23 +112,4 @@ export interface WebhookProductPayload {
   };
 }
 
-export interface WebhookOrderPayload {
-  event: 'order.paid' | 'order.refunded';
-  timestamp: string;
-  order: {
-    id: string;
-    order_number: number;
-    status: OrderStatus;
-    total_paid_amount: number;
-    refunded_amount: number;
-    coupon_code_used: string | null;
-    items: Array<{
-      sku: string;
-      quantity: number;
-      unit_price: number;
-    }>;
-    attribution_data: Record<string, any>;
-  };
-}
-
-export type WebhookPayload = WebhookProductPayload | WebhookOrderPayload;
+export type WebhookPayload = WebhookProductPayload;

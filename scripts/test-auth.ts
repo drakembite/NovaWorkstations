@@ -13,7 +13,6 @@ import {
 import { POST as loginApi } from '../src/app/api/admin/auth/login/route';
 import { POST as logoutApi } from '../src/app/api/admin/auth/logout/route';
 import { middleware } from '../src/middleware';
-import { GET as getOrdersApi } from '../src/app/api/orders/route';
 
 const env = process.env as Record<string, string | undefined>;
 
@@ -215,15 +214,10 @@ async function runAuthTests() {
       path.join(process.cwd(), 'src/components/Footer.tsx'),
       'utf-8'
     );
-    const checkoutContent = fs.readFileSync(
-      path.join(process.cwd(), 'src/components/CheckoutView.tsx'),
-      'utf-8'
-    );
 
     // Verify /admin links removed from storefront components
     assert.ok(!navbarContent.includes('href="/admin"'), 'Navbar must not contain links to /admin');
     assert.ok(!footerContent.includes('href="/admin"'), 'Footer must not contain links to /admin');
-    assert.ok(!checkoutContent.includes('href="/admin"'), 'CheckoutView must not contain links to /admin');
 
     // Verify hook ordering in Navbar.tsx
     const useEffectIdx = navbarContent.indexOf('useEffect(() => {\n    setMobileMenuOpen(false);');
@@ -239,45 +233,31 @@ async function runAuthTests() {
   }
 
   // =========================================================================
-  // 6. /api/orders requires the admin session (NL-2a)
+  // 6. No public route returns customer data; the admin API stays behind the session
   // =========================================================================
-  console.log('\n--- Test 6: GET /api/orders requires the admin session ---');
+  console.log('\n--- Test 6: Order endpoints removed, admin API still guarded ---');
   {
-    // 6.1 No cookie -> 401 JSON without any order data
-    const anonRes = await getOrdersApi(new Request('http://localhost:3000/api/orders'));
-    assert.strictEqual(anonRes.status, 401, 'Unauthenticated GET /api/orders must return 401');
-    const anonText = await anonRes.text();
-    const anonJson = JSON.parse(anonText);
-    assert.strictEqual(anonJson.success, false);
-    assert.ok(!('orders' in anonJson), 'The 401 body must not carry orders');
-    assert.ok(!/customer_email|customer_name|shipping_address/.test(anonText), 'The 401 body must not leak customer fields');
+    // 6.1 The unauthenticated customer-data surface no longer exists (NL-2a closed it, NL-4 removed it)
+    for (const removed of ['src/app/api/orders', 'src/app/api/admin/orders', 'src/app/admin/pedidos']) {
+      assert.ok(!fs.existsSync(path.join(process.cwd(), removed)), `${removed} must not exist`);
+    }
 
-    // 6.2 Tampered / garbage cookie -> 401
-    const badRes = await getOrdersApi(
-      new Request('http://localhost:3000/api/orders', {
-        headers: { cookie: `${ADMIN_COOKIE_NAME}=garbage.token` },
-      })
+    // 6.2 The admin API is closed without a session, or with a tampered cookie
+    const anon = await middleware(new NextRequest('http://localhost:3000/api/admin/products'));
+    assert.strictEqual(anon.status, 401, 'Admin API without a session must return 401');
+    const bad = await middleware(
+      new NextRequest('http://localhost:3000/api/admin/products', { headers: { cookie: `${ADMIN_COOKIE_NAME}=garbage.token` } })
     );
-    assert.strictEqual(badRes.status, 401, 'An invalid session cookie must return 401');
+    assert.strictEqual(bad.status, 401, 'An invalid session cookie must return 401');
 
-    // 6.3 Valid admin session -> 200 with orders
+    // 6.3 ...and open with a valid session
     const token = await createSessionToken(ADMIN_USERNAME);
-    const okRes = await getOrdersApi(
-      new Request('http://localhost:3000/api/orders', {
-        headers: { cookie: `other=1; ${ADMIN_COOKIE_NAME}=${token}` },
-      })
+    const ok = await middleware(
+      new NextRequest('http://localhost:3000/api/admin/products', { headers: { cookie: `other=1; ${ADMIN_COOKIE_NAME}=${token}` } })
     );
-    assert.strictEqual(okRes.status, 200, 'Authenticated GET /api/orders must return 200');
-    const okJson = await okRes.json();
-    assert.strictEqual(okJson.success, true);
-    assert.ok(Array.isArray(okJson.orders), 'Authenticated response must carry the orders array');
+    assert.notStrictEqual(ok.status, 401, 'A valid admin session must pass the middleware');
 
-    // 6.4 Only GET and POST are exposed by the route (no unguarded mutation verbs)
-    const routeModule = await import('../src/app/api/orders/route');
-    const verbs = Object.keys(routeModule).filter((k) => /^(GET|POST|PUT|PATCH|DELETE)$/.test(k)).sort();
-    assert.deepStrictEqual(verbs, ['GET', 'POST'], 'Orders route must expose only GET (guarded) and POST (checkout)');
-
-    console.log('✅ GET /api/orders returns 401 without a session and 200 with one.');
+    console.log('✅ Order endpoints are gone and the admin API requires the session.');
   }
 
   // =========================================================================
@@ -327,10 +307,10 @@ async function runAuthTests() {
             body: JSON.stringify({ username: ADMIN_USERNAME, password: ADMIN_PASSWORD }),
           })
         );
-        const orders = await getOrdersApi(
-          new Request('http://localhost:3000/api/orders', { headers: { cookie: `${ADMIN_COOKIE_NAME}=${devToken}` } })
+        const adminApi = await middleware(
+          new NextRequest('http://localhost:3000/api/admin/products', { headers: { cookie: `${ADMIN_COOKIE_NAME}=${devToken}` } })
         );
-        return { createError, verified, mwStatus: mw.status, loginStatus: login.status, loginCookie: login.cookies.get(ADMIN_COOKIE_NAME), ordersStatus: orders.status };
+        return { createError, verified, mwStatus: mw.status, loginStatus: login.status, loginCookie: login.cookies.get(ADMIN_COOKIE_NAME), adminApiStatus: adminApi.status };
       })
     );
     assert.ok(prodOutcome.createError, 'Production without a secret must refuse to create sessions');
@@ -338,7 +318,7 @@ async function runAuthTests() {
     assert.strictEqual(prodOutcome.mwStatus, 307, 'Middleware must treat the request as unauthenticated');
     assert.ok(prodOutcome.loginStatus >= 500, 'Login must fail with a server error, not issue a session');
     assert.ok(!prodOutcome.loginCookie || !prodOutcome.loginCookie.value, 'Login must not set a session cookie');
-    assert.strictEqual(prodOutcome.ordersStatus, 401, 'GET /api/orders must stay closed');
+    assert.strictEqual(prodOutcome.adminApiStatus, 401, 'The admin API must stay closed');
     assert.ok(prodLogs.includes('ADMIN_SESSION_SECRET'), 'A server-side error log must name the missing variable');
 
     // 7.5 VERCEL alone (even if NODE_ENV is not production) also fails closed

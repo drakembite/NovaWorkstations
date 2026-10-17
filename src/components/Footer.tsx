@@ -223,14 +223,6 @@ export function Footer() {
             <ul className="mt-4 space-y-2.5 text-sm">
               <li>
                 <Link
-                  href="/carrito"
-                  className="transition-colors hover:text-cyan-400"
-                >
-                  Carrito de Compras
-                </Link>
-              </li>
-              <li>
-                <Link
                   href="/products.json"
                   target="_blank"
                   className="inline-flex items-center gap-1 text-slate-500 hover:text-slate-300"

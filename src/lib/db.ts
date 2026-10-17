@@ -19,6 +19,7 @@ import { triggerWebhook } from './webhooks';
 interface DatabaseData {
   products: Product[];
   promotions: Promotion[];
+  /** Legacy: the order flow was removed, existing rows are kept untouched (no destructive migration). */
   orders: Order[];
   /** Optional: files written before this collection existed do not have it. */
   outbound_clicks?: OutboundClick[];
@@ -261,6 +262,7 @@ async function checkAndInitPostgres(): Promise<boolean> {
               created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
             );
 
+            -- Legacy table, kept as is: the order flow was removed but data is never dropped.
             CREATE TABLE IF NOT EXISTS orders (
               id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
               order_number SERIAL UNIQUE,
@@ -455,28 +457,6 @@ function mapPromotionRow(row: any): Promotion {
     ends_at: new Date(row.ends_at).toISOString(),
     is_active: Boolean(row.is_active),
     created_at: new Date(row.created_at).toISOString(),
-  };
-}
-
-function mapOrderRow(row: any): Order {
-  return {
-    id: row.id,
-    order_number: Number(row.order_number),
-    customer_name: row.customer_name,
-    customer_email: row.customer_email,
-    shipping_city: row.shipping_city,
-    shipping_address: row.shipping_address,
-    status: row.status,
-    subtotal_amount: Number(row.subtotal_amount),
-    discount_amount: Number(row.discount_amount),
-    shipping_amount: Number(row.shipping_amount),
-    total_paid_amount: Number(row.total_paid_amount),
-    refunded_amount: Number(row.refunded_amount),
-    coupon_code_used: row.coupon_code_used ?? null,
-    items_json: typeof row.items_json === 'string' ? JSON.parse(row.items_json) : (row.items_json || []),
-    attribution_data: typeof row.attribution_data === 'string' ? JSON.parse(row.attribution_data) : (row.attribution_data || {}),
-    created_at: new Date(row.created_at).toISOString(),
-    refunded_at: row.refunded_at ? new Date(row.refunded_at).toISOString() : null,
   };
 }
 
@@ -722,168 +702,6 @@ export async function togglePromotion(
     promo.is_active = isActive;
     return { ...promo };
   });
-}
-
-export async function getOrders(): Promise<Order[]> {
-  const usePg = await checkAndInitPostgres();
-  if (usePg && pgPool) {
-    try {
-      const res = await pgPool.query('SELECT * FROM orders ORDER BY order_number DESC');
-      return res.rows.map(mapOrderRow);
-    } catch (err: any) {
-      console.warn('[DB] PostgreSQL error in getOrders, falling back to JSON:', err.message);
-    }
-  }
-
-  const data = await readJsonDb();
-  return [...data.orders].sort((a, b) => b.order_number - a.order_number);
-}
-
-export async function getOrderById(id: string): Promise<Order | null> {
-  const usePg = await checkAndInitPostgres();
-  if (usePg && pgPool) {
-    try {
-      const res = await pgPool.query('SELECT * FROM orders WHERE id = $1', [id]);
-      if (res.rows.length === 0) return null;
-      return mapOrderRow(res.rows[0]);
-    } catch (err: any) {
-      console.warn('[DB] PostgreSQL error in getOrderById, falling back to JSON:', err.message);
-    }
-  }
-
-  const data = await readJsonDb();
-  const order = data.orders.find((o) => o.id === id);
-  return order ? { ...order } : null;
-}
-
-export async function createOrder(
-  orderData: Omit<Order, 'id' | 'order_number' | 'created_at' | 'refunded_at'>
-): Promise<Order> {
-  const id = crypto.randomUUID();
-  const created_at = new Date().toISOString();
-  let createdOrder: Order | null = null;
-
-  const usePg = await checkAndInitPostgres();
-  if (usePg && pgPool) {
-    try {
-      const res = await pgPool.query(
-        `INSERT INTO orders (
-          id, customer_name, customer_email, shipping_city, shipping_address,
-          status, subtotal_amount, discount_amount, shipping_amount,
-          total_paid_amount, refunded_amount, coupon_code_used,
-          items_json, attribution_data, created_at, refunded_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16) RETURNING *`,
-        [
-          id,
-          orderData.customer_name,
-          orderData.customer_email,
-          orderData.shipping_city,
-          orderData.shipping_address,
-          orderData.status || 'paid',
-          orderData.subtotal_amount,
-          orderData.discount_amount || 0,
-          orderData.shipping_amount || 0,
-          orderData.total_paid_amount,
-          orderData.refunded_amount || 0,
-          orderData.coupon_code_used ?? null,
-          JSON.stringify(orderData.items_json),
-          JSON.stringify(orderData.attribution_data || {}),
-          created_at,
-          null,
-        ]
-      );
-      createdOrder = mapOrderRow(res.rows[0]);
-    } catch (err: any) {
-      console.warn('[DB] PostgreSQL error in createOrder, falling back to JSON:', err.message);
-    }
-  }
-
-  if (!createdOrder) {
-    createdOrder = await mutateJsonDb((data) => {
-      const maxOrderNum = data.orders.reduce((max, o) => Math.max(max, o.order_number), 1000);
-      const newOrder: Order = {
-        ...orderData,
-        id,
-        order_number: maxOrderNum + 1,
-        status: orderData.status || 'paid',
-        discount_amount: orderData.discount_amount || 0,
-        shipping_amount: orderData.shipping_amount || 0,
-        refunded_amount: orderData.refunded_amount || 0,
-        coupon_code_used: orderData.coupon_code_used ?? null,
-        attribution_data: orderData.attribution_data || {},
-        created_at,
-        refunded_at: null,
-      };
-      data.orders.push(newOrder);
-      return { ...newOrder };
-    });
-  }
-
-  // Trigger order.paid webhook
-  triggerWebhook('order.paid', createdOrder).catch((err) =>
-    console.warn('[Webhook] Trigger error in createOrder:', err)
-  );
-
-  return createdOrder;
-}
-
-export async function refundOrder(
-  id: string,
-  refundAmount: number
-): Promise<Order | null> {
-  const now = new Date().toISOString();
-  let refundedOrder: Order | null = null;
-
-  const usePg = await checkAndInitPostgres();
-  if (usePg && pgPool) {
-    try {
-      const existingRes = await pgPool.query('SELECT * FROM orders WHERE id = $1', [id]);
-      if (existingRes.rows.length > 0) {
-        const currentOrder = mapOrderRow(existingRes.rows[0]);
-        const prevRefunded = currentOrder.refunded_amount || 0;
-        const totalPaid = currentOrder.total_paid_amount;
-        const newRefunded = Number(Math.min(totalPaid, prevRefunded + refundAmount).toFixed(2));
-        const newStatus = newRefunded >= totalPaid ? 'refunded' : 'partially_refunded';
-
-        const updateRes = await pgPool.query(
-          `UPDATE orders
-           SET refunded_amount = $1, status = $2, refunded_at = $3
-           WHERE id = $4
-           RETURNING *`,
-          [newRefunded, newStatus, now, id]
-        );
-        if (updateRes.rows.length > 0) {
-          refundedOrder = mapOrderRow(updateRes.rows[0]);
-        }
-      }
-    } catch (err: any) {
-      console.warn('[DB] PostgreSQL error in refundOrder, falling back to JSON:', err.message);
-    }
-  }
-
-  if (!refundedOrder) {
-    refundedOrder = await mutateJsonDb((data) => {
-      const order = data.orders.find((o) => o.id === id);
-      if (!order) return null;
-      const prevRefunded = order.refunded_amount || 0;
-      const totalPaid = order.total_paid_amount;
-      const newRefunded = Number(Math.min(totalPaid, prevRefunded + refundAmount).toFixed(2));
-      const newStatus = newRefunded >= totalPaid ? 'refunded' : 'partially_refunded';
-
-      order.refunded_amount = newRefunded;
-      order.status = newStatus;
-      order.refunded_at = now;
-      return { ...order };
-    });
-  }
-
-  if (refundedOrder) {
-    triggerWebhook('order.refunded', refundedOrder).catch((err) =>
-      console.warn('[Webhook] Trigger error in refundOrder:', err)
-    );
-  }
-
-  return refundedOrder;
 }
 
 export async function getOutboundClicks(): Promise<OutboundClick[]> {

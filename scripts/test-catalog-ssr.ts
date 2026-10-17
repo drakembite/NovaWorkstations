@@ -19,7 +19,6 @@ import ProductDetailPage, {
   generateMetadata as generateProductMetadata,
 } from '../src/app/productos/[slug]/page';
 import { ProductCard } from '../src/components/ProductCard';
-import { AddToCartButton } from '../src/components/AddToCartButton';
 import {
   STORE_NAME,
   FALLBACK_SITE_URL,
@@ -226,9 +225,9 @@ async function testCatalogSsr() {
   }
 
   // =========================================================================
-  // 6. Reusable Components (ProductCard & AddToCartButton)
+  // 6. Reusable Components (ProductCard)
   // =========================================================================
-  console.log('\n--- Test 6: Reusable Components (ProductCard & AddToCartButton) ---');
+  console.log('\n--- Test 6: Reusable Components (ProductCard) ---');
   {
     const sampleProduct = allProducts[0];
 
@@ -236,32 +235,15 @@ async function testCatalogSsr() {
     assert.ok(cardElement, 'ProductCard must return React element');
     assert.ok(React.isValidElement(cardElement));
 
-    // AddToCartButton is a client component ('use client'). Validate element creation.
-    const cartButtonElement = React.createElement(AddToCartButton, {
-      product: sampleProduct,
-      showQuantitySelector: true,
-    });
-    assert.ok(React.isValidElement(cartButtonElement), 'AddToCartButton element must be valid');
-
-    const compactButtonElement = React.createElement(AddToCartButton, {
-      product: sampleProduct,
-      compact: true,
-    });
-    assert.ok(React.isValidElement(compactButtonElement), 'Compact AddToCartButton element must be valid');
-
     // Also test rendering ProductCard to static HTML
     const { renderToStaticMarkup } = await import('react-dom/server');
     const cardHtml = renderToStaticMarkup(cardElement);
     assert.ok(cardHtml.includes(sampleProduct.title), 'Card HTML must include product title');
     assert.ok(cardHtml.includes(sampleProduct.brand), 'Card HTML must include product brand');
     assert.ok(cardHtml.includes(sampleProduct.shipping_text), 'Card HTML must include shipping text');
+    assert.ok(!cardHtml.includes('Agregar al Carrito'), 'Card HTML must not offer a cart');
 
-    // Render AddToCartButton to static HTML
-    const buttonHtml = renderToStaticMarkup(cartButtonElement);
-    assert.ok(buttonHtml.includes('Agregar al Carrito'), 'AddToCartButton HTML must include action text');
-    assert.ok(buttonHtml.includes('Cantidad:'), 'AddToCartButton with quantity selector must render quantity label');
-
-    console.log('✅ ProductCard and AddToCartButton rendering verified.');
+    console.log('✅ ProductCard rendering verified.');
   }
 
   // =========================================================================
