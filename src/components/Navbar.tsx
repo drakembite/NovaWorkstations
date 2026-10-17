@@ -3,8 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { POLICY_BANNER } from '@/lib/store-policy';
 import {
-  ShoppingCart,
   Menu,
   X,
   Cpu,
@@ -12,7 +12,6 @@ import {
   Truck,
   ChevronRight,
 } from 'lucide-react';
-import { getCartCount, subscribeToCartUpdates } from '@/lib/cart';
 
 const NAV_LINKS = [
   { name: 'Estaciones de Trabajo', href: '/categoria/estaciones-de-trabajo' },
@@ -25,20 +24,7 @@ const NAV_LINKS = [
 
 export function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [cartCount, setCartCount] = useState(0);
   const pathname = usePathname();
-
-  useEffect(() => {
-    // Initial count
-    setCartCount(getCartCount());
-
-    // Subscribe to live cart changes
-    const unsubscribe = subscribeToCartUpdates(() => {
-      setCartCount(getCartCount());
-    });
-
-    return () => unsubscribe();
-  }, []);
 
   // Close mobile menu on route change
   useEffect(() => {
@@ -57,7 +43,7 @@ export function Navbar() {
         <div className="mx-auto flex max-w-7xl items-center justify-center gap-2">
           <Truck className="h-3.5 w-3.5 shrink-0 animate-pulse text-cyan-200" />
           <span>
-            Envío gratis en compras mayores a US$ 150 | Despacho en 24h en Lima y 48-72h a nivel nacional
+            {POLICY_BANNER}
           </span>
         </div>
       </div>
@@ -110,21 +96,8 @@ export function Navbar() {
           })}
         </nav>
 
-        {/* Right Action Icons: Cart Button & Mobile Menu */}
+        {/* Right Action Icons: Mobile Menu */}
         <div className="flex items-center gap-2.5 sm:gap-4">
-          <Link
-            href="/carrito"
-            aria-label="Ver carrito de compras"
-            className="relative flex items-center justify-center rounded-xl bg-slate-900 border border-slate-800 p-2.5 text-slate-200 transition-all hover:border-cyan-500/50 hover:text-cyan-400 hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-cyan-400"
-          >
-            <ShoppingCart className="h-5 w-5" />
-            {cartCount > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-cyan-500 text-[11px] font-bold text-slate-950 shadow-md shadow-cyan-500/50 animate-in zoom-in-50">
-                {cartCount > 99 ? '99+' : cartCount}
-              </span>
-            )}
-          </Link>
-
           {/* Mobile Menu Button */}
           <button
             type="button"

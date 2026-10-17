@@ -5,8 +5,10 @@ import { CustomHeadScript } from '@/components/CustomHeadScript';
 import { AttributionTracker } from '@/components/AttributionTracker';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
+import { getSiteUrl } from '@/lib/catalog';
+import { POLICY_META_SHIPPING } from '@/lib/store-policy';
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://planiaula.com';
+const siteUrl = getSiteUrl();
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -14,8 +16,7 @@ export const metadata: Metadata = {
     default: 'NovaWorkstations | Hardware Profesional para Creadores e Ingenieros',
     template: '%s | NovaWorkstations',
   },
-  description:
-    'Estaciones de trabajo de alto rendimiento, componentes, laptops para arquitectura y monitores 4K de grado profesional. Despacho en 24h en Lima y envíos a todo el Perú.',
+  description: `Estaciones de trabajo de alto rendimiento, componentes, laptops para arquitectura y monitores 4K de grado profesional. ${POLICY_META_SHIPPING} Tienda de demostración: no vende ni cobra.`,
   keywords: [
     'NovaWorkstations',
     'workstations',
@@ -30,17 +31,13 @@ export const metadata: Metadata = {
   authors: [{ name: 'NovaWorkstations' }],
   creator: 'NovaWorkstations',
   publisher: 'NovaWorkstations',
-  alternates: {
-    canonical: '/',
-  },
   openGraph: {
     type: 'website',
     locale: 'es_PE',
     url: siteUrl,
     siteName: 'NovaWorkstations',
     title: 'NovaWorkstations | Hardware Profesional para Creadores e Ingenieros',
-    description:
-      'Estaciones de trabajo de alto rendimiento, laptops para arquitectura y monitores 4K de grado profesional con entrega en 24h.',
+    description: `Estaciones de trabajo de alto rendimiento, laptops para arquitectura y monitores 4K de grado profesional. ${POLICY_META_SHIPPING}`,
     images: [
       {
         url: 'https://images.unsplash.com/photo-1593642632823-8f785ba67e45?auto=format&fit=crop&w=1200&h=630&q=80',
@@ -104,11 +101,6 @@ export default async function RootLayout({
                 '@type': 'PostalAddress',
                 addressLocality: 'Lima',
                 addressCountry: 'PE',
-              },
-              potentialAction: {
-                '@type': 'SearchAction',
-                target: `${siteUrl}/categoria/estaciones-de-trabajo`,
-                'query-input': 'required name=search_term_string',
               },
             }),
           }}

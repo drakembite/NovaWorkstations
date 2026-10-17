@@ -34,12 +34,6 @@ export function SettingsManagerClient({ initialSettings }: SettingsManagerClient
   const [webhookProductUpdated, setWebhookProductUpdated] = useState(
     initialSettings.webhook_url_product_updated || ''
   );
-  const [webhookOrderPaid, setWebhookOrderPaid] = useState(
-    initialSettings.webhook_url_order_paid || ''
-  );
-  const [webhookOrderRefunded, setWebhookOrderRefunded] = useState(
-    initialSettings.webhook_url_order_refunded || ''
-  );
 
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<{
@@ -64,8 +58,6 @@ export function SettingsManagerClient({ initialSettings }: SettingsManagerClient
           store_name: storeName.trim(),
           custom_head_script: customHeadScript.trim() || null,
           webhook_url_product_updated: webhookProductUpdated.trim() || null,
-          webhook_url_order_paid: webhookOrderPaid.trim() || null,
-          webhook_url_order_refunded: webhookOrderRefunded.trim() || null,
         }),
       });
 
@@ -309,120 +301,6 @@ export function SettingsManagerClient({ initialSettings }: SettingsManagerClient
                 </div>
                 <div className="font-mono text-[11px] opacity-80 shrink-0">
                   {testResults['product.updated'].latencyMs}ms
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Webhook 2: order.paid */}
-          <div className="space-y-2.5 rounded-xl border border-slate-800/80 bg-slate-950/60 p-4">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
-                <span className="font-mono text-emerald-400">order.paid</span>
-                <span className="text-slate-400 font-normal">• Nuevo pedido completado</span>
-              </label>
-              <span className="text-[10px] uppercase font-mono text-slate-500">
-                webhook_url_order_paid
-              </span>
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-2">
-              <input
-                type="url"
-                value={webhookOrderPaid}
-                onChange={(e) => setWebhookOrderPaid(e.target.value)}
-                placeholder="https://api.tuempresa.com/webhooks/orders"
-                className="flex-1 rounded-xl border border-slate-800 bg-slate-900 px-3.5 py-2 text-xs font-mono text-white placeholder-slate-600 focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
-              />
-              <button
-                type="button"
-                onClick={() => handleTestWebhook('order.paid', webhookOrderPaid)}
-                disabled={testingEvent === 'order.paid'}
-                className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-700 bg-slate-800 px-4 py-2 text-xs font-semibold text-slate-200 hover:border-cyan-500/50 hover:text-white transition-all disabled:opacity-50 shrink-0"
-              >
-                <Send className="h-3.5 w-3.5 text-emerald-400" />
-                <span>{testingEvent === 'order.paid' ? 'Probando...' : 'Probar Envío'}</span>
-              </button>
-            </div>
-
-            {testResults['order.paid'] && (
-              <div
-                className={`mt-2 flex items-center justify-between rounded-lg p-2.5 text-xs border ${
-                  testResults['order.paid'].success
-                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
-                    : 'bg-rose-500/10 text-rose-400 border-rose-500/30'
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  {testResults['order.paid'].success ? (
-                    <CheckCircle2 className="h-4 w-4 shrink-0" />
-                  ) : (
-                    <AlertCircle className="h-4 w-4 shrink-0" />
-                  )}
-                  <span>
-                    {testResults['order.paid'].message || testResults['order.paid'].error}
-                  </span>
-                </div>
-                <div className="font-mono text-[11px] opacity-80 shrink-0">
-                  {testResults['order.paid'].latencyMs}ms
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Webhook 3: order.refunded */}
-          <div className="space-y-2.5 rounded-xl border border-slate-800/80 bg-slate-950/60 p-4">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
-                <span className="font-mono text-amber-400">order.refunded</span>
-                <span className="text-slate-400 font-normal">• Reembolso total o parcial</span>
-              </label>
-              <span className="text-[10px] uppercase font-mono text-slate-500">
-                webhook_url_order_refunded
-              </span>
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-2">
-              <input
-                type="url"
-                value={webhookOrderRefunded}
-                onChange={(e) => setWebhookOrderRefunded(e.target.value)}
-                placeholder="https://api.tuempresa.com/webhooks/refunds"
-                className="flex-1 rounded-xl border border-slate-800 bg-slate-900 px-3.5 py-2 text-xs font-mono text-white placeholder-slate-600 focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
-              />
-              <button
-                type="button"
-                onClick={() => handleTestWebhook('order.refunded', webhookOrderRefunded)}
-                disabled={testingEvent === 'order.refunded'}
-                className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-700 bg-slate-800 px-4 py-2 text-xs font-semibold text-slate-200 hover:border-cyan-500/50 hover:text-white transition-all disabled:opacity-50 shrink-0"
-              >
-                <Send className="h-3.5 w-3.5 text-amber-400" />
-                <span>
-                  {testingEvent === 'order.refunded' ? 'Probando...' : 'Probar Envío'}
-                </span>
-              </button>
-            </div>
-
-            {testResults['order.refunded'] && (
-              <div
-                className={`mt-2 flex items-center justify-between rounded-lg p-2.5 text-xs border ${
-                  testResults['order.refunded'].success
-                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
-                    : 'bg-rose-500/10 text-rose-400 border-rose-500/30'
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  {testResults['order.refunded'].success ? (
-                    <CheckCircle2 className="h-4 w-4 shrink-0" />
-                  ) : (
-                    <AlertCircle className="h-4 w-4 shrink-0" />
-                  )}
-                  <span>
-                    {testResults['order.refunded'].message || testResults['order.refunded'].error}
-                  </span>
-                </div>
-                <div className="font-mono text-[11px] opacity-80 shrink-0">
-                  {testResults['order.refunded'].latencyMs}ms
                 </div>
               </div>
             )}

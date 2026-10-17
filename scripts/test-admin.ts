@@ -5,10 +5,9 @@ import { PATCH as updateProductApi, GET as getProductApi } from '../src/app/api/
 import { GET as getProductsApi } from '../src/app/api/admin/products/route';
 import { POST as createPromotionApi, GET as getPromotionsApi } from '../src/app/api/admin/promotions/route';
 import { PATCH as togglePromotionApi } from '../src/app/api/admin/promotions/[id]/route';
-import { POST as refundOrderApi } from '../src/app/api/admin/orders/[id]/refund/route';
 import { GET as getSettingsApi, PUT as updateSettingsApi } from '../src/app/api/admin/settings/route';
 import { POST as testWebhookApi } from '../src/app/api/admin/webhooks/test/route';
-import { getProducts, createOrder, getOrderById } from '../src/lib/db';
+import { getProducts } from '../src/lib/db';
 
 async function runAdminTests() {
   console.log('🧪 Starting NovaWorkstations Admin API & Feature Tests...\n');
@@ -155,97 +154,9 @@ async function runAdminTests() {
   }
 
   // =========================================================================
-  // 3. Orders Refund Flow (/api/admin/orders/[id]/refund)
+  // 3. Store Settings API (/api/admin/settings)
   // =========================================================================
-  console.log('\n--- Test 3: Order Refund Endpoint (Partial & Full) ---');
-  {
-    // Create a new fresh order for refund testing
-    const testOrder = await createOrder({
-      customer_name: 'Ana García Admin Test',
-      customer_email: 'ana.garcia@novatest.com',
-      shipping_city: 'Lima',
-      shipping_address: 'Av. Las Begonias 450, San Isidro',
-      status: 'paid',
-      subtotal_amount: 1000.0,
-      discount_amount: 0,
-      shipping_amount: 0,
-      total_paid_amount: 1000.0,
-      refunded_amount: 0,
-      coupon_code_used: null,
-      items_json: [
-        {
-          sku: 'VS-MSI-Z16P',
-          quantity: 1,
-          unit_price: 1000.0,
-          title: 'Laptop MSI Creator Z16P',
-        },
-      ],
-      attribution_data: {
-        utm_source: 'admin_test_suite',
-        utm_medium: 'refund_checker',
-      },
-    });
-
-    assert.strictEqual(testOrder.status, 'paid');
-    assert.strictEqual(testOrder.total_paid_amount, 1000.0);
-
-    // 3.1 Partial Refund: $350.00
-    const partialReq = new Request(`http://localhost:3000/api/admin/orders/${testOrder.id}/refund`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        is_full: false,
-        refund_amount: 350.0,
-      }),
-    });
-    const partialRes = await refundOrderApi(partialReq, {
-      params: Promise.resolve({ id: testOrder.id }),
-    });
-
-    assert.strictEqual(partialRes.status, 200, 'Partial refund should return 200');
-    const partialOrder = await partialRes.json();
-    assert.strictEqual(partialOrder.status, 'partially_refunded', 'Status must be partially_refunded');
-    assert.strictEqual(partialOrder.refunded_amount, 350.0, 'Refunded amount must be 350.00');
-    assert.ok(partialOrder.refunded_at, 'refunded_at must be set');
-
-    // 3.2 Full Refund of Remaining Balance ($650.00)
-    const fullReq = new Request(`http://localhost:3000/api/admin/orders/${testOrder.id}/refund`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        is_full: true,
-      }),
-    });
-    const fullRes = await refundOrderApi(fullReq, {
-      params: Promise.resolve({ id: testOrder.id }),
-    });
-
-    assert.strictEqual(fullRes.status, 200, 'Full refund should return 200');
-    const fullOrder = await fullRes.json();
-    assert.strictEqual(fullOrder.status, 'refunded', 'Status must be refunded');
-    assert.strictEqual(fullOrder.refunded_amount, 1000.0, 'Refunded amount must be full 1000.00');
-
-    // 3.3 Attempting refund on fully refunded order -> 400 Bad Request
-    const extraReq = new Request(`http://localhost:3000/api/admin/orders/${testOrder.id}/refund`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        is_full: false,
-        refund_amount: 50.0,
-      }),
-    });
-    const extraRes = await refundOrderApi(extraReq, {
-      params: Promise.resolve({ id: testOrder.id }),
-    });
-    assert.strictEqual(extraRes.status, 400, 'Refund on fully refunded order must return 400');
-
-    console.log('✅ Partial and full refund processing with status and amount checks verified.');
-  }
-
-  // =========================================================================
-  // 4. Store Settings API (/api/admin/settings)
-  // =========================================================================
-  console.log('\n--- Test 4: Store Settings Update Endpoint ---');
+  console.log('\n--- Test 3: Store Settings Update Endpoint ---');
   {
     // Update settings
     const updateReq = new Request('http://localhost:3000/api/admin/settings', {
@@ -255,8 +166,6 @@ async function runAdminTests() {
         store_name: 'NovaWorkstations Engineering',
         custom_head_script: '<script src="https://example.com/admin-test.js" async></script>',
         webhook_url_product_updated: 'https://webhook.site/admin-test-product',
-        webhook_url_order_paid: 'https://webhook.site/admin-test-paid',
-        webhook_url_order_refunded: 'https://webhook.site/admin-test-refund',
       }),
     });
 
@@ -287,8 +196,6 @@ async function runAdminTests() {
         store_name: 'NovaWorkstations',
         custom_head_script: null,
         webhook_url_product_updated: null,
-        webhook_url_order_paid: null,
-        webhook_url_order_refunded: null,
       }),
     });
     const restoreRes = await updateSettingsApi(restoreReq);
@@ -298,9 +205,9 @@ async function runAdminTests() {
   }
 
   // =========================================================================
-  // 5. Webhook Test Dispatcher (/api/admin/webhooks/test)
+  // 4. Webhook Test Dispatcher (/api/admin/webhooks/test)
   // =========================================================================
-  console.log('\n--- Test 5: Webhook Dispatch Tester Endpoint ---');
+  console.log('\n--- Test 4: Webhook Dispatch Tester Endpoint ---');
   {
     // Set up local mock server to receive test webhook
     let receivedPayload: any = null;
@@ -324,7 +231,7 @@ async function runAdminTests() {
     const testUrl = `http://127.0.0.1:${port}/test-webhook`;
 
     try {
-      // 5.1 Test product.updated
+      // 4.1 Test product.updated
       const testReq1 = new Request('http://localhost:3000/api/admin/webhooks/test', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -342,24 +249,21 @@ async function runAdminTests() {
       assert.ok(data1.latencyMs >= 0);
       assert.strictEqual(receivedPayload.event, 'product.updated');
 
-      // 5.2 Test order.refunded
-      const testReq2 = new Request('http://localhost:3000/api/admin/webhooks/test', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          event: 'order.refunded',
-          url: testUrl,
-        }),
-      });
+      // 4.2 Order events no longer exist (orders were removed with the cart)
+      for (const orderEvent of ['order.paid', 'order.refunded']) {
+        receivedPayload = null;
+        const orderRes = await testWebhookApi(
+          new Request('http://localhost:3000/api/admin/webhooks/test', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ event: orderEvent, url: testUrl }),
+          })
+        );
+        assert.strictEqual(orderRes.status, 400, `${orderEvent} must be rejected`);
+        assert.strictEqual(receivedPayload, null, `${orderEvent} must not be dispatched`);
+      }
 
-      const testRes2 = await testWebhookApi(testReq2);
-      assert.strictEqual(testRes2.status, 200);
-      const data2 = await testRes2.json();
-      assert.strictEqual(data2.success, true);
-      assert.strictEqual(data2.statusCode, 200);
-      assert.strictEqual(receivedPayload.event, 'order.refunded');
-
-      // 5.3 Test invalid event
+      // 4.3 Test invalid event
       const testReqInvalid = new Request('http://localhost:3000/api/admin/webhooks/test', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

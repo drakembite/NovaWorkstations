@@ -14,6 +14,41 @@ import { POST as loginApi } from '../src/app/api/admin/auth/login/route';
 import { POST as logoutApi } from '../src/app/api/admin/auth/logout/route';
 import { middleware } from '../src/middleware';
 
+const env = process.env as Record<string, string | undefined>;
+
+/** Runs `fn` with the given env overrides (undefined deletes the key), restoring afterwards. */
+async function withEnv<T>(overrides: Record<string, string | undefined>, fn: () => Promise<T>): Promise<T> {
+  const previous: Record<string, string | undefined> = {};
+  for (const key of Object.keys(overrides)) {
+    previous[key] = env[key];
+    if (overrides[key] === undefined) delete env[key];
+    else env[key] = overrides[key];
+  }
+  try {
+    return await fn();
+  } finally {
+    for (const key of Object.keys(previous)) {
+      if (previous[key] === undefined) delete env[key];
+      else env[key] = previous[key];
+    }
+  }
+}
+
+/** Captures console.error output while `fn` runs. */
+async function captureErrors<T>(fn: () => Promise<T>): Promise<{ result: T; logs: string }> {
+  const original = console.error;
+  const lines: string[] = [];
+  console.error = (...args: unknown[]) => {
+    lines.push(args.map((a) => (a instanceof Error ? a.message : String(a))).join(' '));
+  };
+  try {
+    const result = await fn();
+    return { result, logs: lines.join('\n') };
+  } finally {
+    console.error = original;
+  }
+}
+
 async function runAuthTests() {
   console.log('🧪 Starting NovaWorkstations Auth & Admin Protection Tests...\n');
 
@@ -179,15 +214,10 @@ async function runAuthTests() {
       path.join(process.cwd(), 'src/components/Footer.tsx'),
       'utf-8'
     );
-    const checkoutContent = fs.readFileSync(
-      path.join(process.cwd(), 'src/components/CheckoutView.tsx'),
-      'utf-8'
-    );
 
     // Verify /admin links removed from storefront components
     assert.ok(!navbarContent.includes('href="/admin"'), 'Navbar must not contain links to /admin');
     assert.ok(!footerContent.includes('href="/admin"'), 'Footer must not contain links to /admin');
-    assert.ok(!checkoutContent.includes('href="/admin"'), 'CheckoutView must not contain links to /admin');
 
     // Verify hook ordering in Navbar.tsx
     const useEffectIdx = navbarContent.indexOf('useEffect(() => {\n    setMobileMenuOpen(false);');
@@ -200,6 +230,121 @@ async function runAuthTests() {
     );
 
     console.log('✅ Storefront admin buttons removed and React hook rule order verified.');
+  }
+
+  // =========================================================================
+  // 6. No public route returns customer data; the admin API stays behind the session
+  // =========================================================================
+  console.log('\n--- Test 6: Order endpoints removed, admin API still guarded ---');
+  {
+    // 6.1 The unauthenticated customer-data surface no longer exists (NL-2a closed it, NL-4 removed it)
+    for (const removed of ['src/app/api/orders', 'src/app/api/admin/orders', 'src/app/admin/pedidos']) {
+      assert.ok(!fs.existsSync(path.join(process.cwd(), removed)), `${removed} must not exist`);
+    }
+
+    // 6.2 The admin API is closed without a session, or with a tampered cookie
+    const anon = await middleware(new NextRequest('http://localhost:3000/api/admin/products'));
+    assert.strictEqual(anon.status, 401, 'Admin API without a session must return 401');
+    const bad = await middleware(
+      new NextRequest('http://localhost:3000/api/admin/products', { headers: { cookie: `${ADMIN_COOKIE_NAME}=garbage.token` } })
+    );
+    assert.strictEqual(bad.status, 401, 'An invalid session cookie must return 401');
+
+    // 6.3 ...and open with a valid session
+    const token = await createSessionToken(ADMIN_USERNAME);
+    const ok = await middleware(
+      new NextRequest('http://localhost:3000/api/admin/products', { headers: { cookie: `other=1; ${ADMIN_COOKIE_NAME}=${token}` } })
+    );
+    assert.notStrictEqual(ok.status, 401, 'A valid admin session must pass the middleware');
+
+    console.log('✅ Order endpoints are gone and the admin API requires the session.');
+  }
+
+  // =========================================================================
+  // 7. Session secret: no committed default, fail closed in production (NL-2b)
+  // =========================================================================
+  console.log('\n--- Test 7: Session secret handling ---');
+  {
+    // 7.1 The source no longer carries a hardcoded default secret
+    const authSource = fs.readFileSync(path.join(process.cwd(), 'src/lib/auth.ts'), 'utf-8');
+    assert.ok(!authSource.includes('nova_workstations_secret'), 'auth.ts must not embed a default secret');
+
+    // 7.2 .env.example documents the variable by name only (no value)
+    const envExample = fs.readFileSync(path.join(process.cwd(), '.env.example'), 'utf-8');
+    assert.ok(/^ADMIN_SESSION_SECRET=\s*$/m.test(envExample), '.env.example must list ADMIN_SESSION_SECRET with an empty value');
+
+    const devToken = await withEnv({ NODE_ENV: 'development', VERCEL: undefined, ADMIN_SESSION_SECRET: undefined }, () =>
+      createSessionToken(ADMIN_USERNAME)
+    );
+
+    // 7.3 Development / test without the variable: generated dev-only fallback works
+    for (const nodeEnv of ['development', 'test']) {
+      await withEnv({ NODE_ENV: nodeEnv, VERCEL: undefined, ADMIN_SESSION_SECRET: undefined }, async () => {
+        const t = await createSessionToken(ADMIN_USERNAME);
+        assert.strictEqual(await verifySessionToken(t), true, `Dev fallback must round-trip in ${nodeEnv}`);
+        assert.strictEqual(await verifySessionToken(devToken), true, 'Dev fallback must be stable within the process');
+      });
+    }
+
+    // 7.4 Production without the variable: fail closed, with a secret-free server log
+    const prodEnv = { NODE_ENV: 'production', VERCEL: undefined, ADMIN_SESSION_SECRET: undefined };
+    const { result: prodOutcome, logs: prodLogs } = await captureErrors(() =>
+      withEnv(prodEnv, async () => {
+        let createError: unknown = null;
+        try {
+          await createSessionToken(ADMIN_USERNAME);
+        } catch (e) {
+          createError = e;
+        }
+        const verified = await verifySessionToken(devToken);
+        const mw = await middleware(
+          new NextRequest('http://localhost:3000/admin', { headers: { cookie: `${ADMIN_COOKIE_NAME}=${devToken}` } })
+        );
+        const login = await loginApi(
+          new NextRequest('http://localhost:3000/api/admin/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: ADMIN_USERNAME, password: ADMIN_PASSWORD }),
+          })
+        );
+        const adminApi = await middleware(
+          new NextRequest('http://localhost:3000/api/admin/products', { headers: { cookie: `${ADMIN_COOKIE_NAME}=${devToken}` } })
+        );
+        return { createError, verified, mwStatus: mw.status, loginStatus: login.status, loginCookie: login.cookies.get(ADMIN_COOKIE_NAME), adminApiStatus: adminApi.status };
+      })
+    );
+    assert.ok(prodOutcome.createError, 'Production without a secret must refuse to create sessions');
+    assert.strictEqual(prodOutcome.verified, false, 'Production without a secret must refuse to validate sessions');
+    assert.strictEqual(prodOutcome.mwStatus, 307, 'Middleware must treat the request as unauthenticated');
+    assert.ok(prodOutcome.loginStatus >= 500, 'Login must fail with a server error, not issue a session');
+    assert.ok(!prodOutcome.loginCookie || !prodOutcome.loginCookie.value, 'Login must not set a session cookie');
+    assert.strictEqual(prodOutcome.adminApiStatus, 401, 'The admin API must stay closed');
+    assert.ok(prodLogs.includes('ADMIN_SESSION_SECRET'), 'A server-side error log must name the missing variable');
+
+    // 7.5 VERCEL alone (even if NODE_ENV is not production) also fails closed
+    const vercelOutcome = await captureErrors(() =>
+      withEnv({ NODE_ENV: 'development', VERCEL: '1', ADMIN_SESSION_SECRET: undefined }, () => verifySessionToken(devToken))
+    );
+    assert.strictEqual(vercelOutcome.result, false, 'VERCEL without a secret must fail closed');
+
+    // 7.6 Production with the variable works, and a different secret invalidates tokens (no secret in logs)
+    const secretA = 'unit-test-secret-A-0123456789abcdef';
+    const secretB = 'unit-test-secret-B-0123456789abcdef';
+    const { result: prodOk, logs: okLogs } = await captureErrors(() =>
+      withEnv({ NODE_ENV: 'production', VERCEL: undefined, ADMIN_SESSION_SECRET: secretA }, async () => {
+        const t = await createSessionToken(ADMIN_USERNAME);
+        const sameSecret = await verifySessionToken(t);
+        const otherSecret = await withEnv({ ADMIN_SESSION_SECRET: secretB }, () => verifySessionToken(t));
+        return { sameSecret, otherSecret };
+      })
+    );
+    assert.strictEqual(prodOk.sameSecret, true, 'Production with the variable must validate its own tokens');
+    assert.strictEqual(prodOk.otherSecret, false, 'A token signed with another secret must be rejected');
+    for (const leaked of [secretA, secretB]) {
+      assert.ok(!prodLogs.includes(leaked) && !okLogs.includes(leaked), 'Logs must never contain a secret value');
+    }
+
+    console.log('✅ No committed secret; production fails closed; dev fallback works.');
   }
 
   console.log('\n🎉 ALL AUTH & ADMIN PROTECTION TESTS PASSED SUCCESSFULLY! 🎉\n');

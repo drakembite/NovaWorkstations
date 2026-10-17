@@ -4,6 +4,7 @@ require.extensions['.css'] = () => {};
 import assert from 'assert';
 import { getAttributionFromCookies } from '../src/lib/attribution';
 import { getStoreSettings, getPromotions } from '../src/lib/db';
+import { STORE_NAME, FALLBACK_SITE_URL, resolveTitle, countOccurrences } from './seo-test-utils';
 import { CustomHeadScript } from '../src/components/CustomHeadScript';
 import EnviosPage, { metadata as enviosMeta } from '../src/app/envios-y-entregas/page';
 import DevolucionesGarantiaPage, { metadata as devMeta } from '../src/app/devoluciones-y-garantia/page';
@@ -121,6 +122,27 @@ async function testLayoutAndInfo() {
     assert.strictEqual(settings.store_name, 'NovaWorkstations');
 
     console.log('✅ Layout metadata and store settings verified.');
+  }
+
+  // =========================================================================
+  // 3b. Static info pages: self canonical and a single store-name suffix (NL-3)
+  // =========================================================================
+  console.log('\n--- Test 3b: Info pages canonical & titles ---');
+  {
+    const { metadata: layoutMeta } = await import('../src/app/layout');
+    const site = (process.env.NEXT_PUBLIC_SITE_URL || FALLBACK_SITE_URL).replace(/\/+$/, '');
+    const pages: Array<[string, any]> = [
+      ['/envios-y-entregas', enviosMeta],
+      ['/devoluciones-y-garantia', devMeta],
+      ['/promociones', promoMeta],
+    ];
+    for (const [route, meta] of pages) {
+      assert.strictEqual((meta.alternates as any)?.canonical, `${site}${route}`, `${route} must canonicalise to itself`);
+      const title = resolveTitle(layoutMeta.title, meta.title);
+      assert.strictEqual(countOccurrences(title, STORE_NAME), 1, `${route} title must hold the store name once: ${title}`);
+      assert.strictEqual((meta.openGraph as any)?.url, `${site}${route}`, `${route} og:url must match its canonical`);
+    }
+    console.log('✅ Info pages canonical and titles verified.');
   }
 
   // =========================================================================

@@ -1,6 +1,7 @@
 import React from 'react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { absoluteUrl, STORE_NAME } from '@/lib/catalog';
 import {
   Tag,
   Sparkles,
@@ -13,12 +14,30 @@ import {
 import { Promotion } from '@/types/database';
 import { getPromotions } from '@/lib/db';
 import { CouponCard } from '@/components/CouponCard';
+import { now } from '@/lib/clock';
+import { COMMERCIAL_EVENTS, EVENT_STATUS_LABEL, eventStatus } from '@/lib/promo-events';
+
+const PAGE_PATH = '/promociones';
+const PAGE_DESCRIPTION =
+  'Aprovecha nuestros cupones y promociones exclusivas en estaciones de trabajo, monitores y componentes de alto rendimiento.';
 
 export const metadata: Metadata = {
-  title: 'Promociones y Cupones Vigentes | NovaWorkstations',
-  description:
-    'Aprovecha nuestros cupones y promociones exclusivas en estaciones de trabajo, monitores y componentes de alto rendimiento.',
+  // The root layout title template appends the store name.
+  title: 'Promociones y Cupones Vigentes',
+  description: PAGE_DESCRIPTION,
+  alternates: { canonical: absoluteUrl(PAGE_PATH) },
+  openGraph: {
+    type: 'website',
+    locale: 'es_PE',
+    siteName: STORE_NAME,
+    url: absoluteUrl(PAGE_PATH),
+    title: 'Promociones y Cupones Vigentes | ' + STORE_NAME,
+    description: PAGE_DESCRIPTION,
+  },
 };
+
+// The event statuses depend on the current time, so the page must never be prerendered.
+export const dynamic = 'force-dynamic';
 
 export default async function PromocionesPage() {
   let promotions: Promotion[] = [];
@@ -30,40 +49,9 @@ export default async function PromocionesPage() {
     console.warn('[Promociones] Error fetching promotions:', err);
   }
 
-  const COMMERCIAL_EVENTS = [
-    {
-      quarter: 'Q1 - Marzo',
-      title: 'Cyber Pro Hardware Kickoff',
-      description: 'Campañas de inicio de año con 10% de descuento en estaciones móviles y periféricos de precisión.',
-      status: 'Finalizado',
-    },
-    {
-      quarter: 'Q3 - Julio',
-      title: 'Especial Fiestas Patrias',
-      description: 'Descuentos conmemorativos en laptops y torres para arquitectos y creadores audiovisuales.',
-      status: 'Finalizado',
-    },
-    {
-      quarter: 'Q4 - Octubre',
-      title: 'Tech Architecture & CAD Days',
-      description: 'Promoción activa en hardware certificado para Revit, AutoCAD, Blender y Unreal Engine.',
-      status: 'Vigente Ahora',
-      highlight: true,
-    },
-    {
-      quarter: 'Q4 - Noviembre',
-      title: 'Black Friday & Cyber Monday Pro',
-      description: 'Nuestra mayor campaña del año con 15% OFF en workstations de gama alta con código BLACKFRIDAY15.',
-      status: 'Próximamente',
-      highlight: true,
-    },
-    {
-      quarter: 'Q4 - Diciembre',
-      title: 'Renovación Tecnológica Corporativa',
-      description: 'Precios especiales por volumen de estaciones de trabajo para estudios y productoras.',
-      status: 'Planificado',
-    },
-  ];
+  // Statuses come from the event dates and the (injectable) clock, never from typed labels.
+  const at = now();
+  const events = COMMERCIAL_EVENTS.map((event) => ({ ...event, status: eventStatus(event, at) }));
 
   return (
     <div className="py-12 sm:py-16">
@@ -78,7 +66,7 @@ export default async function PromocionesPage() {
             Cupones y Promociones Vigentes
           </h1>
           <p className="mt-3 text-base text-slate-400 sm:mx-auto sm:max-w-2xl">
-            Aplica estos códigos durante el proceso de compra para acceder a descuentos automáticos en hardware profesional.
+            Estos son los códigos y campañas que publica la tienda de demostración. Se muestran solo como información: aquí no se pueden canjear.
           </p>
         </div>
 
@@ -120,7 +108,7 @@ export default async function PromocionesPage() {
           </div>
 
           <div className="space-y-4">
-            {COMMERCIAL_EVENTS.map((event, idx) => (
+            {events.map((event, idx) => (
               <div
                 key={idx}
                 className={`flex flex-col sm:flex-row sm:items-center justify-between rounded-xl border p-5 transition-all ${
@@ -135,15 +123,16 @@ export default async function PromocionesPage() {
                       {event.quarter}
                     </span>
                     <span
+                      data-event-status={event.status}
                       className={`rounded px-2 py-0.5 text-[10px] font-bold ${
-                        event.status === 'Vigente Ahora'
+                        event.status === 'current'
                           ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                          : event.status === 'Próximamente'
+                          : event.status === 'upcoming'
                           ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
                           : 'bg-slate-800 text-slate-400'
                       }`}
                     >
-                      {event.status}
+                      {EVENT_STATUS_LABEL[event.status]}
                     </span>
                   </div>
                   <h3 className="mt-1.5 text-base font-bold text-white">{event.title}</h3>
@@ -158,7 +147,7 @@ export default async function PromocionesPage() {
         <section className="mt-14 rounded-2xl border border-slate-800 bg-slate-900/30 p-6 sm:p-8">
           <h3 className="text-base font-bold text-white mb-3">Términos y Condiciones de Cupones</h3>
           <ul className="list-disc list-inside space-y-2 text-xs text-slate-400">
-            <li>Los cupones deben introducirse en el campo &quot;Cupón de Descuento&quot; en la página del carrito antes de finalizar la orden.</li>
+            <li>Esta es una tienda de demostración: los cupones se publican solo como información y no se pueden canjear aquí.</li>
             <li>No son transferibles a dinero en efectivo ni acumulables entre sí en una misma transacción.</li>
             <li>El descuento se aplica sobre el subtotal de los productos aplicables, no sobre el costo de flete.</li>
             <li>NovaWorkstations se reserva el derecho de dar por concluida una campaña anticipadamente en caso de agotamiento de inventario.</li>
@@ -171,7 +160,7 @@ export default async function PromocionesPage() {
             href="/categoria/estaciones-de-trabajo"
             className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 px-6 py-3 text-sm font-semibold text-slate-950 shadow-lg shadow-cyan-500/25 hover:from-cyan-400 hover:to-blue-500 transition-all font-bold"
           >
-            <span>Ir al Catálogo y Aplicar Cupones</span>
+            <span>Ir al Catálogo</span>
             <ArrowRight className="h-4 w-4" />
           </Link>
         </div>

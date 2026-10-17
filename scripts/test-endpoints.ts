@@ -56,6 +56,10 @@ async function testEndpoints() {
       assert.ok(field in p1, `Field "${field}" must exist on product JSON`);
     }
 
+    assert.ok('currency' in p1, 'Field "currency" must exist on product JSON');
+    for (const prod of data.products) {
+      assert.strictEqual(prod.currency, 'USD', `currency must be USD for ${prod.sku}`);
+    }
     assert.strictEqual(typeof p1.in_stock, 'boolean', 'in_stock must be a boolean');
     assert.strictEqual(p1.in_stock, p1.stock_quantity > 0, 'in_stock must match stock_quantity > 0');
     assert.strictEqual(
@@ -99,6 +103,10 @@ async function testEndpoints() {
     const data = await res.json();
     assert.ok(Array.isArray(data.products), 'Response must have products array');
     assert.strictEqual(data.products.length, dbProducts.length);
+    assert.ok(
+      data.products.every((p: any) => p.currency === 'USD'),
+      '/api/products must expose currency on every product'
+    );
     assert.strictEqual(
       data.products[0].url,
       `https://novaworkstations.com/productos/${data.products[0].slug}`
@@ -132,6 +140,8 @@ async function testEndpoints() {
     assert.strictEqual(data.product.sku, testProduct.sku);
     assert.strictEqual(data.product.slug, testProduct.slug);
     assert.strictEqual(data.product.price, testProduct.price);
+    assert.strictEqual(data.product.currency, testProduct.currency, 'product JSON must expose currency');
+    assert.strictEqual(data.currency, testProduct.currency, 'flattened product JSON must expose currency');
     assert.strictEqual(data.product.in_stock, testProduct.stock_quantity > 0);
     assert.strictEqual(
       data.product.url,

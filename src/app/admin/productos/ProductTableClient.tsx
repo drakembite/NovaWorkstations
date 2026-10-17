@@ -14,6 +14,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { Product } from '@/types/database';
+import { validateBuyUrl, validateBuyStore, validateBuyNote, BUY_NOTE_MAX_LENGTH } from '@/lib/buy-url';
 
 interface ProductTableClientProps {
   initialProducts: Product[];
@@ -25,6 +26,9 @@ interface RowState {
   stock_quantity: string;
   category: string;
   short_description: string;
+  buy_url: string;
+  buy_store: string;
+  buy_note: string;
   isModified: boolean;
   isSaving: boolean;
   saveFeedback: { type: 'success' | 'error'; message: string; time: string } | null;
@@ -45,6 +49,9 @@ export function ProductTableClient({ initialProducts }: ProductTableClientProps)
         stock_quantity: p.stock_quantity.toString(),
         category: p.category,
         short_description: p.short_description,
+        buy_url: p.buy_url ?? '',
+        buy_store: p.buy_store ?? '',
+        buy_note: p.buy_note ?? '',
         isModified: false,
         isSaving: false,
         saveFeedback: null,
@@ -139,6 +146,34 @@ export function ProductTableClient({ initialProducts }: ProductTableClientProps)
     const comparePrice =
       row.compare_at_price.trim() === '' ? null : parseFloat(row.compare_at_price);
 
+    // Same rules as the admin API: absolute https URL only, and a store name when a URL is set.
+    const buyUrlResult = validateBuyUrl(row.buy_url);
+    const buyStoreResult = validateBuyStore(row.buy_store);
+    const buyNoteResult = validateBuyNote(row.buy_note);
+    const buyError = !buyUrlResult.ok
+      ? 'Enlace de compra inválido (debe ser https://)'
+      : !buyStoreResult.ok
+        ? 'Nombre de tienda inválido'
+        : !buyNoteResult.ok
+          ? 'Nota de compra inválida (texto simple, máx. 300 caracteres)'
+          : buyUrlResult.value && !buyStoreResult.value
+          ? 'Indica la tienda del enlace'
+          : null;
+    if (buyError || !buyUrlResult.ok || !buyStoreResult.ok || !buyNoteResult.ok) {
+      setRowStates((prev) => ({
+        ...prev,
+        [id]: {
+          ...prev[id],
+          saveFeedback: {
+            type: 'error',
+            message: buyError || 'Enlace de compra inválido',
+            time: new Date().toLocaleTimeString(),
+          },
+        },
+      }));
+      return;
+    }
+
     // Set saving spinner
     setRowStates((prev) => ({
       ...prev,
@@ -155,6 +190,9 @@ export function ProductTableClient({ initialProducts }: ProductTableClientProps)
           stock_quantity: stockNum,
           category: row.category.trim(),
           short_description: row.short_description.trim(),
+          buy_url: buyUrlResult.value,
+          buy_store: buyStoreResult.value,
+          buy_note: buyNoteResult.value,
         }),
       });
 
@@ -180,6 +218,9 @@ export function ProductTableClient({ initialProducts }: ProductTableClientProps)
           stock_quantity: updatedProduct.stock_quantity.toString(),
           category: updatedProduct.category,
           short_description: updatedProduct.short_description,
+          buy_url: updatedProduct.buy_url ?? '',
+          buy_store: updatedProduct.buy_store ?? '',
+          buy_note: updatedProduct.buy_note ?? '',
           isModified: false,
           isSaving: false,
           saveFeedback: {
@@ -260,7 +301,7 @@ export function ProductTableClient({ initialProducts }: ProductTableClientProps)
 
       {/* Inline Editing Table */}
       <div className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-900/60 shadow-lg backdrop-blur-sm">
-        <table className="w-full min-w-[950px] text-left text-xs">
+        <table className="w-full min-w-[1200px] text-left text-xs">
           <thead className="border-b border-slate-800 bg-slate-950/60 text-[11px] uppercase tracking-wider text-slate-400">
             <tr>
               <th className="py-3.5 pl-4 pr-3 font-semibold w-72">Producto / SKU</th>
@@ -269,13 +310,14 @@ export function ProductTableClient({ initialProducts }: ProductTableClientProps)
               <th className="py-3.5 px-2 font-semibold w-24">Stock</th>
               <th className="py-3.5 px-2 font-semibold w-40">Categoría</th>
               <th className="py-3.5 px-2 font-semibold">Descripción Corta</th>
+              <th className="py-3.5 px-2 font-semibold w-64">Enlace de compra</th>
               <th className="py-3.5 pr-4 pl-2 font-semibold text-right w-44">Acción / Estado</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-800/60">
             {filteredProducts.length === 0 ? (
               <tr>
-                <td colSpan={7} className="py-12 text-center text-slate-500 text-sm">
+                <td colSpan={8} className="py-12 text-center text-slate-500 text-sm">
                   No se encontraron productos que coincidan con la búsqueda.
                 </td>
               </tr>
@@ -287,6 +329,9 @@ export function ProductTableClient({ initialProducts }: ProductTableClientProps)
                   stock_quantity: p.stock_quantity.toString(),
                   category: p.category,
                   short_description: p.short_description,
+                  buy_url: p.buy_url ?? '',
+                  buy_store: p.buy_store ?? '',
+                  buy_note: p.buy_note ?? '',
                   isModified: false,
                   isSaving: false,
                   saveFeedback: null,
@@ -412,7 +457,41 @@ export function ProductTableClient({ initialProducts }: ProductTableClientProps)
                       />
                     </td>
 
-                    {/* Col 7: Guardar Button & Feedback */}
+                    {/* Col 7: Outbound buy link (https URL) and store name */}
+                    <td className="py-3 px-2 align-top">
+                      <div className="flex flex-col gap-1.5">
+                        <input
+                          type="url"
+                          inputMode="url"
+                          maxLength={2000}
+                          placeholder="https://tienda.com/producto"
+                          aria-label={`Enlace de compra de ${p.sku}`}
+                          value={state.buy_url}
+                          onChange={(e) => handleInputChange(p.id, 'buy_url', e.target.value)}
+                          className="w-full rounded-lg border border-slate-700/80 bg-slate-950 px-2 py-1.5 font-mono text-[11px] text-slate-200 placeholder-slate-600 focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                        />
+                        <input
+                          type="text"
+                          maxLength={120}
+                          placeholder="Tienda (ej. Amazon)"
+                          aria-label={`Tienda de ${p.sku}`}
+                          value={state.buy_store}
+                          onChange={(e) => handleInputChange(p.id, 'buy_store', e.target.value)}
+                          className="w-full rounded-lg border border-slate-700/80 bg-slate-950 px-2 py-1.5 text-xs text-slate-200 placeholder-slate-600 focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                        />
+                        <textarea
+                          rows={2}
+                          maxLength={BUY_NOTE_MAX_LENGTH}
+                          placeholder="Nota junto al botón (opcional, texto simple)"
+                          aria-label={`Nota de compra de ${p.sku}`}
+                          value={state.buy_note}
+                          onChange={(e) => handleInputChange(p.id, 'buy_note', e.target.value)}
+                          className="w-full resize-none rounded-lg border border-slate-700/80 bg-slate-950 px-2 py-1.5 text-xs leading-relaxed text-slate-200 placeholder-slate-600 focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                        />
+                      </div>
+                    </td>
+
+                    {/* Col 8: Guardar Button & Feedback */}
                     <td className="py-3 pr-4 pl-2 align-top text-right">
                       <div className="flex flex-col items-end gap-1.5">
                         <button

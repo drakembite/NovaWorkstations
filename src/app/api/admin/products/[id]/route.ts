@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { updateProduct, getProductById } from '@/lib/db';
 import { Product } from '@/types/database';
+import { validateBuyUrl, validateBuyStore, validateBuyNote } from '@/lib/buy-url';
 
 export const dynamic = 'force-dynamic';
 
@@ -112,6 +113,39 @@ export async function PATCH(
     // Additional optional fields
     if (body.title !== undefined) updates.title = String(body.title).trim();
     if (body.brand !== undefined) updates.brand = String(body.brand).trim();
+
+    // Outbound purchase link: absolute https URL only, and the URL/store pair must stay coherent.
+    if (body.buy_url !== undefined) {
+      const result = validateBuyUrl(body.buy_url);
+      if (!result.ok) {
+        return NextResponse.json({ error: result.error }, { status: 400 });
+      }
+      updates.buy_url = result.value;
+    }
+    if (body.buy_store !== undefined) {
+      const result = validateBuyStore(body.buy_store);
+      if (!result.ok) {
+        return NextResponse.json({ error: result.error }, { status: 400 });
+      }
+      updates.buy_store = result.value;
+    }
+    if (body.buy_note !== undefined) {
+      const result = validateBuyNote(body.buy_note);
+      if (!result.ok) {
+        return NextResponse.json({ error: result.error }, { status: 400 });
+      }
+      updates.buy_note = result.value;
+    }
+    if (updates.buy_url !== undefined || updates.buy_store !== undefined) {
+      const finalUrl = updates.buy_url !== undefined ? updates.buy_url : existing.buy_url;
+      const finalStore = updates.buy_store !== undefined ? updates.buy_store : existing.buy_store;
+      if (finalUrl && !finalStore) {
+        return NextResponse.json(
+          { error: 'buy_store is required when buy_url is set' },
+          { status: 400 }
+        );
+      }
+    }
 
     const updatedProduct = await updateProduct(id, updates);
     if (!updatedProduct) {

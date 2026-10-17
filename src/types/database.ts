@@ -16,8 +16,28 @@ export interface Product {
   shipping_text: string;
   image_url: string;
   custom_head_jsonld: Record<string, any> | null;
+  /** Absolute https URL of the independent store page where the product can be bought. */
+  buy_url: string | null;
+  /** Display name of that store, shown as "Comprar en {buy_store}". */
+  buy_store: string | null;
+  /** Optional plain-text caveat shown next to the buy button (e.g. an equivalent model). Max 300 chars. */
+  buy_note: string | null;
   created_at: string;
   updated_at: string;
+}
+
+/**
+ * First-party record of a click on a product's outbound buy link. Deliberately minimal:
+ * no IP address, user agent or any other personal data.
+ */
+export interface OutboundClick {
+  id: string;
+  sku: string;
+  /** Always the product's stored buy_url at click time, never a client supplied value. */
+  target_url: string;
+  /** Whitelisted fields of the inbound first-party attribution cookie. */
+  attribution_data: Record<string, string>;
+  created_at: string;
 }
 
 export type DiscountType = 'percentage' | 'fixed';
@@ -37,6 +57,7 @@ export interface Promotion {
   created_at: string;
 }
 
+// Legacy order shapes: the order flow was removed, stored rows are kept untouched.
 export type OrderStatus = 'paid' | 'partially_refunded' | 'refunded';
 
 export interface OrderItem {
@@ -66,6 +87,7 @@ export interface Order {
   refunded_at: string | null;
 }
 
+/** The order webhook columns are legacy: no longer used or shown, but never dropped. */
 export interface StoreSettings {
   id: number;
   store_name: string;
@@ -76,7 +98,7 @@ export interface StoreSettings {
   updated_at: string;
 }
 
-export type WebhookEvent = 'product.updated' | 'order.paid' | 'order.refunded';
+export type WebhookEvent = 'product.updated';
 
 export interface WebhookProductPayload {
   event: 'product.updated';
@@ -92,23 +114,4 @@ export interface WebhookProductPayload {
   };
 }
 
-export interface WebhookOrderPayload {
-  event: 'order.paid' | 'order.refunded';
-  timestamp: string;
-  order: {
-    id: string;
-    order_number: number;
-    status: OrderStatus;
-    total_paid_amount: number;
-    refunded_amount: number;
-    coupon_code_used: string | null;
-    items: Array<{
-      sku: string;
-      quantity: number;
-      unit_price: number;
-    }>;
-    attribution_data: Record<string, any>;
-  };
-}
-
-export type WebhookPayload = WebhookProductPayload | WebhookOrderPayload;
+export type WebhookPayload = WebhookProductPayload;

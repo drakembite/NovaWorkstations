@@ -14,6 +14,13 @@ import {
   Clock,
   ExternalLink,
 } from 'lucide-react';
+import { DEMO_NOTICE_FOOTER } from '@/lib/store-copy';
+import {
+  DEMO_POLICY_LABEL,
+  NO_MAILBOX_NOTE,
+  POLICY_FOOTER_SHIPPING,
+  STORE_POLICY,
+} from '@/lib/store-policy';
 
 export function Footer() {
   const pathname = usePathname();
@@ -28,6 +35,9 @@ export function Footer() {
       {/* Value Proposition Highlights */}
       <div className="border-b border-slate-800/80 bg-slate-900/40">
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+          <p className="mb-5 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+            {DEMO_POLICY_LABEL}
+          </p>
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
             <div className="flex items-start gap-3.5">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-500/10 text-cyan-400 border border-blue-500/20">
@@ -36,7 +46,7 @@ export function Footer() {
               <div>
                 <h4 className="text-sm font-semibold text-slate-200">Envíos Rápidos</h4>
                 <p className="mt-1 text-xs text-slate-400">
-                  Entrega en 24h en Lima y 48-72h en provincias. Gratis en compras &gt; US$ 150.
+                  {POLICY_FOOTER_SHIPPING}
                 </p>
               </div>
             </div>
@@ -46,7 +56,7 @@ export function Footer() {
                 <RotateCcw className="h-5 w-5" />
               </div>
               <div>
-                <h4 className="text-sm font-semibold text-slate-200">30 Días de Devolución</h4>
+                <h4 className="text-sm font-semibold text-slate-200">{STORE_POLICY.returnDays} Días de Devolución</h4>
                 <p className="mt-1 text-xs text-slate-400">
                   Retorno garantizado sin costos ocultos si el producto no cumple tus expectativas.
                 </p>
@@ -58,7 +68,7 @@ export function Footer() {
                 <ShieldCheck className="h-5 w-5" />
               </div>
               <div>
-                <h4 className="text-sm font-semibold text-slate-200">12 Meses de Garantía</h4>
+                <h4 className="text-sm font-semibold text-slate-200">{STORE_POLICY.warrantyMonths} Meses de Garantía</h4>
                 <p className="mt-1 text-xs text-slate-400">
                   Cobertura directa de fábrica y soporte técnico especializado para workstations.
                 </p>
@@ -107,7 +117,7 @@ export function Footer() {
               </div>
               <div className="flex items-center gap-2">
                 <Mail className="h-4 w-4 text-cyan-400 shrink-0" />
-                <span>contacto@novaworkstations.com</span>
+                <span>{NO_MAILBOX_NOTE}</span>
               </div>
             </div>
           </div>
@@ -222,14 +232,6 @@ export function Footer() {
             <ul className="mt-4 space-y-2.5 text-sm">
               <li>
                 <Link
-                  href="/carrito"
-                  className="transition-colors hover:text-cyan-400"
-                >
-                  Carrito de Compras
-                </Link>
-              </li>
-              <li>
-                <Link
                   href="/products.json"
                   target="_blank"
                   className="inline-flex items-center gap-1 text-slate-500 hover:text-slate-300"
@@ -242,8 +244,13 @@ export function Footer() {
           </div>
         </div>
 
+        {/* Demo status statement */}
+        <p className="mt-12 rounded-xl border border-slate-800 bg-slate-900/50 px-4 py-3 text-xs leading-relaxed text-slate-400">
+          {DEMO_NOTICE_FOOTER}
+        </p>
+
         {/* Bottom bar */}
-        <div className="mt-12 border-t border-slate-800/80 pt-8 sm:flex sm:items-center sm:justify-between text-xs text-slate-500">
+        <div className="mt-6 border-t border-slate-800/80 pt-8 sm:flex sm:items-center sm:justify-between text-xs text-slate-500">
           <p>© {currentYear} NovaWorkstations S.A.C. Todos los derechos reservados.</p>
           <p className="mt-4 sm:mt-0">
             Diseñado para flujos de trabajo de ingeniería, renderizado 3D e inteligencia artificial.

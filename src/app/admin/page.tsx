@@ -1,39 +1,32 @@
 import React from 'react';
 import Link from 'next/link';
 import {
-  DollarSign,
-  ShoppingBag,
+  MousePointerClick,
+  Link2,
   Package,
   Tag,
   AlertTriangle,
   ArrowRight,
   ChevronRight,
   TrendingUp,
-  CheckCircle2,
-  Clock,
-  RotateCcw,
   Sparkles,
   ShieldCheck,
 } from 'lucide-react';
-import { getProducts, getOrders, getPromotions } from '@/lib/db';
+import { getProducts, getOutboundClicks, getPromotions } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
 export default async function AdminDashboardPage() {
-  const [products, orders, promotions] = await Promise.all([
+  const [products, clicks, promotions] = await Promise.all([
     getProducts(),
-    getOrders(),
+    getOutboundClicks(),
     getPromotions(),
   ]);
 
   // Executive metrics calculation
-  const totalNetSales = orders.reduce((sum, order) => {
-    const net = Number(order.total_paid_amount) - Number(order.refunded_amount || 0);
-    return sum + Math.max(0, net);
-  }, 0);
-
-  const totalOrders = orders.length;
+  const totalClicks = clicks.length;
   const totalProducts = products.length;
+  const linkedProducts = products.filter((p) => p.buy_url).length;
   const activePromotionsCount = promotions.filter((p) => p.is_active).length;
 
   // Stock alerts: stock_quantity <= 5
@@ -41,8 +34,8 @@ export default async function AdminDashboardPage() {
     .filter((p) => p.stock_quantity <= 5)
     .sort((a, b) => a.stock_quantity - b.stock_quantity);
 
-  // Recent orders preview (top 5)
-  const recentOrders = orders.slice(0, 6);
+  // Recent outbound clicks preview (newest first)
+  const recentClicks = [...clicks].reverse().slice(0, 6);
 
   return (
     <div className="space-y-8">
@@ -73,39 +66,39 @@ export default async function AdminDashboardPage() {
         <div className="relative overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/70 p-5 shadow-sm backdrop-blur-sm">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium uppercase tracking-wider text-slate-400">
-              Ventas Totales Netas
+              Clics de Compra Salientes
             </span>
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-              <DollarSign className="h-5 w-5" />
+              <MousePointerClick className="h-5 w-5" />
             </div>
           </div>
           <div className="mt-3">
             <div className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
-              US$ {totalNetSales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {totalClicks}
             </div>
             <div className="mt-1.5 flex items-center gap-1 text-xs text-emerald-400">
               <TrendingUp className="h-3.5 w-3.5" />
-              <span>Ingresos deducidos de reembolsos</span>
+              <span>Visitas enviadas a tiendas independientes</span>
             </div>
           </div>
         </div>
 
-        {/* Metric 2: Total Pedidos */}
+        {/* Metric 2: Productos con enlace de compra */}
         <div className="relative overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/70 p-5 shadow-sm backdrop-blur-sm">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium uppercase tracking-wider text-slate-400">
-              Total Pedidos
+              Productos con Enlace de Compra
             </span>
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-500/10 text-cyan-400 border border-blue-500/20">
-              <ShoppingBag className="h-5 w-5" />
+              <Link2 className="h-5 w-5" />
             </div>
           </div>
           <div className="mt-3">
             <div className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
-              {totalOrders}
+              {linkedProducts} / {totalProducts}
             </div>
             <div className="mt-1.5 flex items-center gap-1 text-xs text-slate-400">
-              <span>Registrados en base de datos</span>
+              <span>Se editan en Productos</span>
             </div>
           </div>
         </div>
@@ -249,7 +242,7 @@ export default async function AdminDashboardPage() {
               >
                 <div className="flex items-center gap-2.5">
                   <Package className="h-4 w-4 text-cyan-400" />
-                  <span>Edición Rápida de Precios</span>
+                  <span>Precios y Enlaces de Compra</span>
                 </div>
                 <ChevronRight className="h-4 w-4 text-slate-500" />
               </Link>
@@ -261,17 +254,6 @@ export default async function AdminDashboardPage() {
                 <div className="flex items-center gap-2.5">
                   <Tag className="h-4 w-4 text-purple-400" />
                   <span>Crear Cupón de Descuento</span>
-                </div>
-                <ChevronRight className="h-4 w-4 text-slate-500" />
-              </Link>
-
-              <Link
-                href="/admin/pedidos"
-                className="flex items-center justify-between rounded-xl border border-slate-800/80 bg-slate-800/40 p-3 text-sm font-medium text-slate-200 hover:border-slate-700 hover:bg-slate-800 hover:text-white transition-all"
-              >
-                <div className="flex items-center gap-2.5">
-                  <RotateCcw className="h-4 w-4 text-amber-400" />
-                  <span>Procesar Devoluciones</span>
                 </div>
                 <ChevronRight className="h-4 w-4 text-slate-500" />
               </Link>
@@ -295,100 +277,53 @@ export default async function AdminDashboardPage() {
               <span>Plataforma NovaWorkstations</span>
             </h3>
             <p className="mt-1.5 text-xs text-slate-400 leading-relaxed">
-              Catálogo sincronizado en tiempo real con disparadores de webhooks activos para integraciones ERP y sistemas de facturación externa.
+              Tienda de demostración: cada producto envía al comprador a una tienda independiente. El catálogo notifica cambios mediante el webhook product.updated.
             </p>
           </div>
         </div>
       </div>
 
-      {/* Recent Orders Preview Table */}
+      {/* Recent outbound clicks */}
       <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 backdrop-blur-sm">
-        <div className="flex items-center justify-between border-b border-slate-800 pb-4">
-          <div>
-            <h2 className="text-base font-bold text-white">Últimos Pedidos Registrados</h2>
-            <p className="text-xs text-slate-400">Actividad reciente de compras y transacciones</p>
-          </div>
-          <Link
-            href="/admin/pedidos"
-            className="text-xs font-semibold text-cyan-400 hover:text-cyan-300 flex items-center gap-1"
-          >
-            <span>Ver todos los pedidos</span>
-            <ArrowRight className="h-3.5 w-3.5" />
-          </Link>
+        <div className="border-b border-slate-800 pb-4">
+          <h2 className="text-base font-bold text-white">Últimos Clics de Compra</h2>
+          <p className="text-xs text-slate-400">
+            Registro propio de clics en «Comprar en…» con la atribución de origen (sin IP ni datos personales).
+          </p>
         </div>
 
         <div className="mt-4 overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="border-b border-slate-800 text-[11px] uppercase tracking-wider text-slate-400">
               <tr>
-                <th className="pb-3 font-semibold">Pedido #</th>
-                <th className="pb-3 font-semibold">Cliente</th>
-                <th className="pb-3 font-semibold">Ciudad</th>
-                <th className="pb-3 font-semibold">Estado</th>
-                <th className="pb-3 font-semibold text-right">Total Pagado</th>
-                <th className="pb-3 font-semibold text-right">Reembolsado</th>
-                <th className="pb-3 font-semibold text-right">Acción</th>
+                <th className="pb-3 font-semibold">Fecha</th>
+                <th className="pb-3 font-semibold">SKU</th>
+                <th className="pb-3 font-semibold">Destino</th>
+                <th className="pb-3 font-semibold">Origen</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60">
-              {recentOrders.length === 0 ? (
+              {recentClicks.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-6 text-center text-slate-500">
-                    Aún no se han registrado pedidos.
+                  <td colSpan={4} className="py-6 text-center text-slate-500">
+                    Aún no se han registrado clics.
                   </td>
                 </tr>
               ) : (
-                recentOrders.map((o) => {
-                  return (
-                    <tr key={o.id} className="hover:bg-slate-800/30 transition-colors">
-                      <td className="py-3 font-mono font-bold text-white">
-                        #{o.order_number}
-                      </td>
-                      <td className="py-3">
-                        <div className="font-semibold text-slate-200">{o.customer_name}</div>
-                        <div className="text-slate-400">{o.customer_email}</div>
-                      </td>
-                      <td className="py-3 text-slate-300">{o.shipping_city}</td>
-                      <td className="py-3">
-                        <span
-                          className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold border ${
-                            o.status === 'paid'
-                              ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
-                              : o.status === 'partially_refunded'
-                              ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
-                              : 'bg-rose-500/10 text-rose-400 border-rose-500/30'
-                          }`}
-                        >
-                          {o.status === 'paid'
-                            ? 'Pagado'
-                            : o.status === 'partially_refunded'
-                            ? 'Reembolso Parcial'
-                            : 'Reembolsado'}
-                        </span>
-                      </td>
-                      <td className="py-3 text-right font-mono font-semibold text-white">
-                        US$ {Number(o.total_paid_amount).toFixed(2)}
-                      </td>
-                      <td className="py-3 text-right font-mono text-slate-400">
-                        {Number(o.refunded_amount || 0) > 0 ? (
-                          <span className="text-amber-400">
-                            -US$ {Number(o.refunded_amount).toFixed(2)}
-                          </span>
-                        ) : (
-                          'US$ 0.00'
-                        )}
-                      </td>
-                      <td className="py-3 text-right">
-                        <Link
-                          href="/admin/pedidos"
-                          className="rounded-md border border-slate-700 bg-slate-800 px-2 py-1 text-[11px] font-medium text-slate-200 hover:border-cyan-500/50 hover:text-cyan-400 transition-colors"
-                        >
-                          Gestionar
-                        </Link>
-                      </td>
-                    </tr>
-                  );
-                })
+                recentClicks.map((c) => (
+                  <tr key={c.id} className="hover:bg-slate-800/30 transition-colors">
+                    <td className="py-3 font-mono text-slate-300">
+                      {new Date(c.created_at).toISOString().replace('T', ' ').slice(0, 16)} UTC
+                    </td>
+                    <td className="py-3 font-mono font-bold text-cyan-400">{c.sku}</td>
+                    <td className="py-3 max-w-[320px] truncate text-slate-300" title={c.target_url}>
+                      {c.target_url}
+                    </td>
+                    <td className="py-3 text-slate-400">
+                      {c.attribution_data.utm_source || c.attribution_data.aic_src || '—'}
+                    </td>
+                  </tr>
+                ))
               )}
             </tbody>
           </table>

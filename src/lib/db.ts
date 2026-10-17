@@ -6,6 +6,7 @@ import {
   Product,
   Promotion,
   Order,
+  OutboundClick,
   StoreSettings,
 } from '@/types/database';
 import {
@@ -18,9 +19,15 @@ import { triggerWebhook } from './webhooks';
 interface DatabaseData {
   products: Product[];
   promotions: Promotion[];
+  /** Legacy: the order flow was removed, existing rows are kept untouched (no destructive migration). */
   orders: Order[];
+  /** Optional: files written before this collection existed do not have it. */
+  outbound_clicks?: OutboundClick[];
   store_settings: StoreSettings;
 }
+
+// Keeps the JSON fallback bounded: the oldest clicks are dropped beyond this many records.
+const MAX_JSON_OUTBOUND_CLICKS = 5000;
 
 // In serverless environments like Vercel, the project root is read-only.
 // Use /tmp which is writable, or fallback seamlessly to in-memory store.
@@ -33,10 +40,52 @@ let memoryDb: DatabaseData = {
   products: [...initialProducts],
   promotions: [...initialPromotions],
   orders: [],
+  outbound_clicks: [],
   store_settings: { ...initialStoreSettings },
 };
 
 let writeLock: Promise<void> = Promise.resolve();
+let buyLinksBackfilled = false;
+
+function isBlank(value: unknown): boolean {
+  return value === undefined || value === null || (typeof value === 'string' && value.trim() === '');
+}
+
+/**
+ * Non-destructive backfill of the outbound buy link from the seed, matched by SKU.
+ * Fills `buy_url` / `buy_store` / `buy_note` only where the stored value is missing, null or empty, so an
+ * admin edit is never overwritten. Legacy rows without the fields are normalised to null.
+ * Returns true when anything changed (the caller persists the file).
+ */
+function backfillBuyLinks(products: Product[]): boolean {
+  let changed = false;
+  const seedBySku = new Map(initialProducts.map((p) => [p.sku, p]));
+  for (const product of products) {
+    const seed = seedBySku.get(product.sku);
+    if (isBlank(product.buy_url)) {
+      const next = seed?.buy_url ?? null;
+      if (product.buy_url !== next) {
+        product.buy_url = next;
+        changed = true;
+      }
+    }
+    if (isBlank(product.buy_store)) {
+      const next = seed?.buy_store ?? null;
+      if (product.buy_store !== next) {
+        product.buy_store = next;
+        changed = true;
+      }
+    }
+    if (isBlank(product.buy_note)) {
+      const next = seed?.buy_note ?? null;
+      if (product.buy_note !== next) {
+        product.buy_note = next;
+        changed = true;
+      }
+    }
+  }
+  return changed;
+}
 
 async function readJsonDb(): Promise<DatabaseData> {
   try {
@@ -53,6 +102,7 @@ async function readJsonDb(): Promise<DatabaseData> {
         products: [...initialProducts],
         promotions: [...initialPromotions],
         orders: [],
+        outbound_clicks: [],
         store_settings: { ...initialStoreSettings },
       };
       try {
@@ -83,9 +133,21 @@ async function readJsonDb(): Promise<DatabaseData> {
       data.orders = [];
       modified = true;
     }
+    if (!Array.isArray(data.outbound_clicks)) {
+      data.outbound_clicks = [];
+      modified = true;
+    }
     if (!data.store_settings) {
       data.store_settings = { ...initialStoreSettings };
       modified = true;
+    }
+    // Once per process (the JSON equivalent of the Postgres init): later reads must not undo
+    // an admin edit that cleared a link.
+    if (!buyLinksBackfilled) {
+      buyLinksBackfilled = true;
+      if (backfillBuyLinks(data.products)) {
+        modified = true;
+      }
     }
 
     if (modified) {
@@ -189,6 +251,10 @@ async function checkAndInitPostgres(): Promise<boolean> {
               updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
             );
 
+            ALTER TABLE products ADD COLUMN IF NOT EXISTS buy_url TEXT NULL;
+            ALTER TABLE products ADD COLUMN IF NOT EXISTS buy_store VARCHAR(120) NULL;
+            ALTER TABLE products ADD COLUMN IF NOT EXISTS buy_note TEXT NULL;
+
             CREATE TABLE IF NOT EXISTS promotions (
               id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
               code VARCHAR(50) NOT NULL UNIQUE,
@@ -204,6 +270,7 @@ async function checkAndInitPostgres(): Promise<boolean> {
               created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
             );
 
+            -- Legacy table, kept as is: the order flow was removed but data is never dropped.
             CREATE TABLE IF NOT EXISTS orders (
               id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
               order_number SERIAL UNIQUE,
@@ -222,6 +289,14 @@ async function checkAndInitPostgres(): Promise<boolean> {
               attribution_data JSONB NOT NULL DEFAULT '{}'::jsonb,
               created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
               refunded_at TIMESTAMPTZ NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS outbound_clicks (
+              id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+              sku VARCHAR(64) NOT NULL,
+              target_url TEXT NOT NULL,
+              attribution_data JSONB NOT NULL DEFAULT '{}'::jsonb,
+              created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
             );
 
             CREATE TABLE IF NOT EXISTS store_settings (
@@ -244,8 +319,8 @@ async function checkAndInitPostgres(): Promise<boolean> {
                   id, sku, slug, title, brand, mpn, barcode_ean, category,
                   price, compare_at_price, currency, stock_quantity,
                   short_description, specs_json, shipping_text, image_url,
-                  custom_head_jsonld, created_at, updated_at
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)`,
+                  custom_head_jsonld, buy_url, buy_store, buy_note, created_at, updated_at
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)`,
                 [
                   prod.id,
                   prod.sku,
@@ -264,11 +339,28 @@ async function checkAndInitPostgres(): Promise<boolean> {
                   prod.shipping_text,
                   prod.image_url,
                   prod.custom_head_jsonld ? JSON.stringify(prod.custom_head_jsonld) : null,
+                  prod.buy_url,
+                  prod.buy_store,
+                  prod.buy_note,
                   prod.created_at,
                   prod.updated_at,
                 ]
               );
             }
+          }
+
+          // Non-destructive backfill: fill the buy link from the seed only where the stored
+          // value is null or empty, so an admin edit is never overwritten. updated_at is untouched.
+          for (const prod of initialProducts) {
+            if (!prod.buy_url) continue;
+            await client.query(
+              `UPDATE products SET
+                 buy_url = COALESCE(NULLIF(buy_url, ''), $1),
+                 buy_store = COALESCE(NULLIF(buy_store, ''), $2),
+                 buy_note = COALESCE(NULLIF(buy_note, ''), $3)
+               WHERE sku = $4`,
+              [prod.buy_url, prod.buy_store, prod.buy_note, prod.sku]
+            );
           }
 
           const promoCountRes = await client.query('SELECT COUNT(*) FROM promotions');
@@ -354,6 +446,9 @@ function mapProductRow(row: any): Product {
     custom_head_jsonld: row.custom_head_jsonld
       ? (typeof row.custom_head_jsonld === 'string' ? JSON.parse(row.custom_head_jsonld) : row.custom_head_jsonld)
       : null,
+    buy_url: row.buy_url ?? null,
+    buy_store: row.buy_store ?? null,
+    buy_note: row.buy_note ?? null,
     created_at: new Date(row.created_at).toISOString(),
     updated_at: new Date(row.updated_at).toISOString(),
   };
@@ -376,25 +471,14 @@ function mapPromotionRow(row: any): Promotion {
   };
 }
 
-function mapOrderRow(row: any): Order {
+function mapOutboundClickRow(row: any): OutboundClick {
   return {
     id: row.id,
-    order_number: Number(row.order_number),
-    customer_name: row.customer_name,
-    customer_email: row.customer_email,
-    shipping_city: row.shipping_city,
-    shipping_address: row.shipping_address,
-    status: row.status,
-    subtotal_amount: Number(row.subtotal_amount),
-    discount_amount: Number(row.discount_amount),
-    shipping_amount: Number(row.shipping_amount),
-    total_paid_amount: Number(row.total_paid_amount),
-    refunded_amount: Number(row.refunded_amount),
-    coupon_code_used: row.coupon_code_used ?? null,
-    items_json: typeof row.items_json === 'string' ? JSON.parse(row.items_json) : (row.items_json || []),
-    attribution_data: typeof row.attribution_data === 'string' ? JSON.parse(row.attribution_data) : (row.attribution_data || {}),
+    sku: row.sku,
+    target_url: row.target_url,
+    attribution_data:
+      typeof row.attribution_data === 'string' ? JSON.parse(row.attribution_data) : (row.attribution_data || {}),
     created_at: new Date(row.created_at).toISOString(),
-    refunded_at: row.refunded_at ? new Date(row.refunded_at).toISOString() : null,
   };
 }
 
@@ -631,166 +715,61 @@ export async function togglePromotion(
   });
 }
 
-export async function getOrders(): Promise<Order[]> {
+export async function getOutboundClicks(): Promise<OutboundClick[]> {
   const usePg = await checkAndInitPostgres();
   if (usePg && pgPool) {
     try {
-      const res = await pgPool.query('SELECT * FROM orders ORDER BY order_number DESC');
-      return res.rows.map(mapOrderRow);
+      const res = await pgPool.query('SELECT * FROM outbound_clicks ORDER BY created_at ASC');
+      return res.rows.map(mapOutboundClickRow);
     } catch (err: any) {
-      console.warn('[DB] PostgreSQL error in getOrders, falling back to JSON:', err.message);
+      console.warn('[DB] PostgreSQL error in getOutboundClicks, falling back to JSON:', err.message);
     }
   }
 
   const data = await readJsonDb();
-  return [...data.orders].sort((a, b) => b.order_number - a.order_number);
+  return [...(data.outbound_clicks ?? [])];
 }
 
-export async function getOrderById(id: string): Promise<Order | null> {
-  const usePg = await checkAndInitPostgres();
-  if (usePg && pgPool) {
-    try {
-      const res = await pgPool.query('SELECT * FROM orders WHERE id = $1', [id]);
-      if (res.rows.length === 0) return null;
-      return mapOrderRow(res.rows[0]);
-    } catch (err: any) {
-      console.warn('[DB] PostgreSQL error in getOrderById, falling back to JSON:', err.message);
-    }
-  }
-
-  const data = await readJsonDb();
-  const order = data.orders.find((o) => o.id === id);
-  return order ? { ...order } : null;
-}
-
-export async function createOrder(
-  orderData: Omit<Order, 'id' | 'order_number' | 'created_at' | 'refunded_at'>
-): Promise<Order> {
+/** Stores one outbound click. Callers pass only the sku, the DB target and sanitised attribution. */
+export async function createOutboundClick(
+  click: Pick<OutboundClick, 'sku' | 'target_url' | 'attribution_data'>
+): Promise<OutboundClick> {
   const id = crypto.randomUUID();
   const created_at = new Date().toISOString();
-  let createdOrder: Order | null = null;
+  const attribution_data = click.attribution_data || {};
 
   const usePg = await checkAndInitPostgres();
   if (usePg && pgPool) {
     try {
       const res = await pgPool.query(
-        `INSERT INTO orders (
-          id, customer_name, customer_email, shipping_city, shipping_address,
-          status, subtotal_amount, discount_amount, shipping_amount,
-          total_paid_amount, refunded_amount, coupon_code_used,
-          items_json, attribution_data, created_at, refunded_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16) RETURNING *`,
-        [
-          id,
-          orderData.customer_name,
-          orderData.customer_email,
-          orderData.shipping_city,
-          orderData.shipping_address,
-          orderData.status || 'paid',
-          orderData.subtotal_amount,
-          orderData.discount_amount || 0,
-          orderData.shipping_amount || 0,
-          orderData.total_paid_amount,
-          orderData.refunded_amount || 0,
-          orderData.coupon_code_used ?? null,
-          JSON.stringify(orderData.items_json),
-          JSON.stringify(orderData.attribution_data || {}),
-          created_at,
-          null,
-        ]
+        `INSERT INTO outbound_clicks (id, sku, target_url, attribution_data, created_at)
+         VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+        [id, click.sku, click.target_url, JSON.stringify(attribution_data), created_at]
       );
-      createdOrder = mapOrderRow(res.rows[0]);
-    } catch (err: any) {
-      console.warn('[DB] PostgreSQL error in createOrder, falling back to JSON:', err.message);
-    }
-  }
-
-  if (!createdOrder) {
-    createdOrder = await mutateJsonDb((data) => {
-      const maxOrderNum = data.orders.reduce((max, o) => Math.max(max, o.order_number), 1000);
-      const newOrder: Order = {
-        ...orderData,
-        id,
-        order_number: maxOrderNum + 1,
-        status: orderData.status || 'paid',
-        discount_amount: orderData.discount_amount || 0,
-        shipping_amount: orderData.shipping_amount || 0,
-        refunded_amount: orderData.refunded_amount || 0,
-        coupon_code_used: orderData.coupon_code_used ?? null,
-        attribution_data: orderData.attribution_data || {},
-        created_at,
-        refunded_at: null,
-      };
-      data.orders.push(newOrder);
-      return { ...newOrder };
-    });
-  }
-
-  // Trigger order.paid webhook
-  triggerWebhook('order.paid', createdOrder).catch((err) =>
-    console.warn('[Webhook] Trigger error in createOrder:', err)
-  );
-
-  return createdOrder;
-}
-
-export async function refundOrder(
-  id: string,
-  refundAmount: number
-): Promise<Order | null> {
-  const now = new Date().toISOString();
-  let refundedOrder: Order | null = null;
-
-  const usePg = await checkAndInitPostgres();
-  if (usePg && pgPool) {
-    try {
-      const existingRes = await pgPool.query('SELECT * FROM orders WHERE id = $1', [id]);
-      if (existingRes.rows.length > 0) {
-        const currentOrder = mapOrderRow(existingRes.rows[0]);
-        const prevRefunded = currentOrder.refunded_amount || 0;
-        const totalPaid = currentOrder.total_paid_amount;
-        const newRefunded = Number(Math.min(totalPaid, prevRefunded + refundAmount).toFixed(2));
-        const newStatus = newRefunded >= totalPaid ? 'refunded' : 'partially_refunded';
-
-        const updateRes = await pgPool.query(
-          `UPDATE orders
-           SET refunded_amount = $1, status = $2, refunded_at = $3
-           WHERE id = $4
-           RETURNING *`,
-          [newRefunded, newStatus, now, id]
-        );
-        if (updateRes.rows.length > 0) {
-          refundedOrder = mapOrderRow(updateRes.rows[0]);
-        }
+      if (res.rows.length > 0) {
+        return mapOutboundClickRow(res.rows[0]);
       }
+      return { id, sku: click.sku, target_url: click.target_url, attribution_data, created_at };
     } catch (err: any) {
-      console.warn('[DB] PostgreSQL error in refundOrder, falling back to JSON:', err.message);
+      console.warn('[DB] PostgreSQL error in createOutboundClick, falling back to JSON:', err.message);
     }
   }
 
-  if (!refundedOrder) {
-    refundedOrder = await mutateJsonDb((data) => {
-      const order = data.orders.find((o) => o.id === id);
-      if (!order) return null;
-      const prevRefunded = order.refunded_amount || 0;
-      const totalPaid = order.total_paid_amount;
-      const newRefunded = Number(Math.min(totalPaid, prevRefunded + refundAmount).toFixed(2));
-      const newStatus = newRefunded >= totalPaid ? 'refunded' : 'partially_refunded';
-
-      order.refunded_amount = newRefunded;
-      order.status = newStatus;
-      order.refunded_at = now;
-      return { ...order };
-    });
-  }
-
-  if (refundedOrder) {
-    triggerWebhook('order.refunded', refundedOrder).catch((err) =>
-      console.warn('[Webhook] Trigger error in refundOrder:', err)
-    );
-  }
-
-  return refundedOrder;
+  return mutateJsonDb((data) => {
+    const record: OutboundClick = {
+      id,
+      sku: click.sku,
+      target_url: click.target_url,
+      attribution_data,
+      created_at,
+    };
+    const list = data.outbound_clicks ?? (data.outbound_clicks = []);
+    list.push(record);
+    if (list.length > MAX_JSON_OUTBOUND_CLICKS) {
+      list.splice(0, list.length - MAX_JSON_OUTBOUND_CLICKS);
+    }
+    return { ...record };
+  });
 }
 
 export async function getStoreSettings(): Promise<StoreSettings> {

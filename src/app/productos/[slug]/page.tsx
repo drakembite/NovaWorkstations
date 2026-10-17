@@ -15,8 +15,22 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { getProductBySlug } from '@/lib/db';
-import { normalizeCategorySlug } from '@/lib/catalog';
-import { AddToCartButton } from '@/components/AddToCartButton';
+import {
+  normalizeCategorySlug,
+  absoluteUrl,
+  buildBreadcrumbJsonLd,
+  serializeJsonLd,
+  STORE_NAME,
+} from '@/lib/catalog';
+import { BuyAction } from '@/components/BuyAction';
+import {
+  DEMO_POLICY_LABEL,
+  LIMA_DELIVERY_SHORT,
+  PROVINCES_DELIVERY_SHORT,
+  STORE_POLICY,
+  WARRANTY_LABEL,
+} from '@/lib/store-policy';
+import { DEMO_NOTICE_LONG } from '@/lib/store-copy';
 
 type ProductPageProps = {
   params: Promise<{ slug: string }>;
@@ -29,21 +43,27 @@ export async function generateMetadata(props: ProductPageProps): Promise<Metadat
 
   if (!product) {
     return {
-      title: 'Producto no encontrado | NovaWorkstations',
+      title: 'Producto no encontrado',
       description: 'El producto solicitado no está disponible en el catálogo de NovaWorkstations.',
     };
   }
 
   const images = product.image_url ? [{ url: product.image_url }] : [];
+  const canonicalUrl = absoluteUrl(`/productos/${product.slug}`);
 
   return {
-    title: `${product.title} | NovaWorkstations`,
+    // The root layout title template appends the store name.
+    title: product.title,
     description: product.short_description,
+    alternates: { canonical: canonicalUrl },
     openGraph: {
-      title: `${product.title} | NovaWorkstations`,
+      title: `${product.title} | ${STORE_NAME}`,
       description: product.short_description,
+      url: canonicalUrl,
+      siteName: STORE_NAME,
       images,
-      type: 'website',
+      // No `type` here: Next's openGraph.type cannot express "product", so the page
+      // renders <meta property="og:type" content="product"> itself (exactly one og:type).
     },
   };
 }
@@ -103,6 +123,12 @@ export default async function ProductDetailPage(props: ProductPageProps) {
     },
   };
 
+  const breadcrumbJsonLd = buildBreadcrumbJsonLd([
+    { name: 'Inicio', path: '/' },
+    { name: product.category, path: `/categoria/${categorySlug}` },
+    { name: product.title, path: `/productos/${product.slug}` },
+  ]);
+
   const jsonLdContent = product.custom_head_jsonld
     ? typeof product.custom_head_jsonld === 'string'
       ? product.custom_head_jsonld
@@ -116,6 +142,12 @@ export default async function ProductDetailPage(props: ProductPageProps) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLdContent }}
       />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(breadcrumbJsonLd) }}
+      />
+      {/* React 19 hoists <meta> into <head>. */}
+      <meta property="og:type" content="product" />
 
       {/* 2. Breadcrumbs Navigation */}
       <nav aria-label="Breadcrumb" className="mb-8 flex items-center gap-2 text-xs text-slate-400">
@@ -159,21 +191,22 @@ export default async function ProductDetailPage(props: ProductPageProps) {
             </div>
           </div>
 
-          {/* Value Highlights under image */}
+          {/* Value Highlights under image (declared policy of the demo store) */}
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">{DEMO_POLICY_LABEL}</p>
           <div className="grid grid-cols-3 gap-3">
             <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-800/80 bg-slate-900/40 p-3 text-center">
               <Truck className="h-5 w-5 text-cyan-400 mb-1" />
-              <span className="text-[11px] font-bold text-white">Despacho 24h</span>
+              <span className="text-[11px] font-bold text-white">{`Despacho ${LIMA_DELIVERY_SHORT}`}</span>
               <span className="text-[10px] text-slate-400">Lima y Callao</span>
             </div>
             <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-800/80 bg-slate-900/40 p-3 text-center">
               <ShieldCheck className="h-5 w-5 text-emerald-400 mb-1" />
-              <span className="text-[11px] font-bold text-white">12 Meses</span>
+              <span className="text-[11px] font-bold text-white">{`${STORE_POLICY.warrantyMonths} Meses`}</span>
               <span className="text-[10px] text-slate-400">Garantía oficial</span>
             </div>
             <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-800/80 bg-slate-900/40 p-3 text-center">
               <RotateCcw className="h-5 w-5 text-indigo-400 mb-1" />
-              <span className="text-[11px] font-bold text-white">30 Días</span>
+              <span className="text-[11px] font-bold text-white">{`${STORE_POLICY.returnDays} Días`}</span>
               <span className="text-[10px] text-slate-400">Devolución fácil</span>
             </div>
           </div>
@@ -276,28 +309,25 @@ export default async function ProductDetailPage(props: ProductPageProps) {
             </p>
           </div>
 
-          {/* Interactive AddToCart with quantity selector */}
+          {/* Outbound purchase: this demo store sells nothing, the button leads to a real store */}
           <div className="mt-8 border-t border-slate-800 pt-6">
-            <AddToCartButton product={product} showQuantitySelector={true} />
+            <BuyAction product={product} />
+            <p className="mt-3 text-xs leading-relaxed text-slate-400">{DEMO_NOTICE_LONG}</p>
           </div>
 
           {/* Delivery & Warranty Assurances */}
           <div className="mt-8 rounded-2xl border border-slate-800/80 bg-slate-900/40 p-4">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              Garantías de Compra en NovaWorkstations
+              {DEMO_POLICY_LABEL}
             </span>
             <ul className="mt-3 space-y-2 text-xs text-slate-300">
               <li className="flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4 shrink-0 text-cyan-400" />
-                <span>Despacho seguro en 24 horas en Lima Metropolitana y 48-72h a todo el Perú.</span>
+                <span>{`Despacho seguro en ${STORE_POLICY.limaDeliveryHours} horas en Lima Metropolitana y ${PROVINCES_DELIVERY_SHORT} a todo el Perú.`}</span>
               </li>
               <li className="flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4 shrink-0 text-cyan-400" />
-                <span>12 meses de garantía de fábrica oficial con soporte técnico local.</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 shrink-0 text-cyan-400" />
-                <span>Emitimos Factura o Boleta de Venta electrónica con RUC para empresas.</span>
+                <span>{`${WARRANTY_LABEL} de garantía de fábrica oficial con soporte técnico local.`}</span>
               </li>
             </ul>
           </div>
