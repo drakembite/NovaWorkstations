@@ -62,8 +62,12 @@ async function run() {
     const dellInsert = inserts.find((i) => i.params?.includes('VS-DELL-U27'))!;
     assert.ok(dellInsert.params!.includes(dell.buy_url), 'Dell INSERT carries its URL');
     assert.ok(dellInsert.params!.includes(dell.buy_store), 'Dell INSERT carries its store');
+    const msi = initialProducts.find((p) => p.sku === 'VS-MSI-Z16P')!;
     const msiInsert = inserts.find((i) => i.params?.includes('VS-MSI-Z16P'))!;
-    assert.strictEqual(msiInsert.params!.filter((v) => v === null).length >= 3, true, 'unlinked product inserts nulls');
+    assert.ok(msi.buy_url && msiInsert.params!.includes(msi.buy_url), 'MSI INSERT carries its (approximate) URL');
+    assert.ok(msi.buy_note && msiInsert.params!.includes(msi.buy_note), 'MSI INSERT carries its note');
+    assert.strictEqual(initialProducts.filter((p) => p.buy_url).length, 12, 'all twelve seed products are linked');
+    assert.strictEqual(inserts.filter((i) => i.params?.some((v) => typeof v === 'string' && v.startsWith('https://') && /amazon|falabella/.test(v))).length, 12, 'every INSERT carries a link');
     const benq = initialProducts.find((p) => p.sku === 'VS-BENQ-PD32')!;
     const benqInsert = inserts.find((i) => i.params?.includes('VS-BENQ-PD32'))!;
     assert.ok(benq.buy_note && benqInsert.params!.includes(benq.buy_note), 'BenQ INSERT carries its note');

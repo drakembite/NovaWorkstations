@@ -46,7 +46,7 @@ export function validateBuyUrl(input: unknown): FieldResult {
   return { ok: true, value };
 }
 
-/** Store label shown as "Comprar en {buy_store}". Empty, blank and null clear it. */
+/** Internal store label (administrators only, never rendered publicly). Empty, blank and null clear it. */
 export function validateBuyStore(input: unknown): FieldResult {
   if (input === null || input === undefined) return { ok: true, value: null };
   if (typeof input !== 'string') return { ok: false, error: 'buy_store must be a string' };

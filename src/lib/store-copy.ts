@@ -13,4 +13,4 @@ export const DEMO_NOTICE_SHORT =
 
 /** Footer statement, site wide. */
 export const DEMO_NOTICE_FOOTER =
-  'NovaWorkstations es una tienda de demostración: no vende productos ni cobra pagos. Los botones «Comprar en…» llevan a páginas de tiendas independientes.';
+  'NovaWorkstations es una tienda de demostración: no vende productos ni cobra pagos. Los botones «Comprar» llevan a páginas de tiendas independientes.';

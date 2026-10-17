@@ -78,7 +78,7 @@ export const POLICY_META_SHIPPING = `Envíos en ${LIMA_DELIVERY_SHORT} en Lima y
 
 /** What happens after the buy button: the destination store takes over. */
 export const DESTINATION_STORE_NOTE =
-  'Esta tienda no vende ni despacha: al pulsar «Comprar en…» la compra, el envío, las devoluciones y la garantía los gestiona la tienda donde compres, con sus propias condiciones.';
+  'Esta tienda no vende ni despacha: al pulsar «Comprar» la compra, el envío, las devoluciones y la garantía los gestiona la tienda donde compres, con sus propias condiciones.';
 
 /** The demo store has no mailbox: nothing here may be answered by email. */
 export const NO_MAILBOX_NOTE =

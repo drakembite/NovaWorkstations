@@ -92,7 +92,6 @@ export function formatProduct(product: Product, baseUrl: string) {
     shipping_text: product.shipping_text,
     image_url: product.image_url,
     buy_url: product.buy_url ?? null,
-    buy_store: product.buy_store ?? null,
     buy_note: product.buy_note ?? null,
     url: `${baseUrl}/productos/${product.slug}`,
     updated_at: product.updated_at,

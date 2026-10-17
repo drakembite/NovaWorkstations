@@ -62,9 +62,8 @@ async function run() {
     const products = await db.getProducts();
     assert.strictEqual(products.length, 12);
     const linked = products.filter((p) => p.buy_url);
-    const unlinked = products.filter((p) => !p.buy_url);
-    assert.strictEqual(linked.length, 10, 'ten products have a link today');
-    assert.strictEqual(unlinked.length, 2);
+    assert.strictEqual(linked.length, 12, 'every product has a link');
+    assert.ok(products.every((p) => p.stock_quantity > 0 && p.buy_url), 'every product that shows stock has a buy link');
 
     const ProductDetailPage = (await import('../src/app/productos/[slug]/page')).default;
     const { ProductCard } = await import('../src/components/ProductCard');
@@ -78,7 +77,7 @@ async function run() {
       const tree = await ProductDetailPage({ params: Promise.resolve({ slug: product.slug }) });
       const html = renderToStaticMarkup(tree as React.ReactElement);
       const anchors = parseAnchors(html);
-      const buyAnchors = anchors.filter((a) => a.text.startsWith('Comprar en'));
+      const buyAnchors = anchors.filter((a) => a.rel === 'nofollow noopener noreferrer');
 
       assert.ok(!html.includes('Agregar al Carrito'), `${product.sku}: no add-to-cart on the page`);
       assert.ok(!/Factura o Boleta/i.test(html) && !/\bRUC\b/.test(html), `${product.sku}: false invoice/RUC claim removed`);
@@ -89,7 +88,7 @@ async function run() {
       if (product.buy_url) {
         assert.strictEqual(buyAnchors.length, 1, `${product.sku}: exactly one buy button`);
         const a = buyAnchors[0];
-        assert.strictEqual(a.text, `Comprar en ${product.buy_store}`);
+        assert.strictEqual(a.text, 'Comprar', `${product.sku}: the visible text is exactly Comprar`);
         assert.strictEqual(a.href, product.buy_url, `${product.sku}: href is the plain visible target, not a redirect`);
         assert.strictEqual(a.target, '_blank');
         assert.deepStrictEqual(
@@ -122,7 +121,7 @@ async function run() {
     for (const product of products) {
       const html = renderToStaticMarkup(ProductCard({ product }));
       const anchors = parseAnchors(html);
-      const buyAnchors = anchors.filter((a) => a.text.startsWith('Comprar en'));
+      const buyAnchors = anchors.filter((a) => a.rel === 'nofollow noopener noreferrer');
       assert.ok(!html.includes('Agregar al Carrito') && !html.includes('Añadir'), 'no add-to-cart on cards');
       assert.ok(/tienda de demostraci[oó]n/i.test(html), `${product.sku}: card carries the short demo notice`);
       if (product.buy_url) {
@@ -130,7 +129,7 @@ async function run() {
         assert.strictEqual(buyAnchors[0].href, product.buy_url);
         assert.strictEqual(buyAnchors[0].target, '_blank');
         assert.deepStrictEqual((buyAnchors[0].rel || '').split(/\s+/).sort(), ['nofollow', 'noopener', 'noreferrer']);
-        assert.strictEqual(buyAnchors[0].text, `Comprar en ${product.buy_store}`);
+        assert.strictEqual(buyAnchors[0].text, 'Comprar');
       } else {
         assert.strictEqual(buyAnchors.length, 0);
         assert.ok(html.includes(NO_LINK_TEXT));
@@ -144,12 +143,54 @@ async function run() {
     console.log('✅ Product cards verified.');
 
     // -------------------------------------------------------------------
+    // 2b. No external store names anywhere in the rendered markup
+    // -------------------------------------------------------------------
+    console.log('\n--- Test 2b: no store name in the page, card or button markup ---');
+    {
+      const STORE_NAMES = /falabella|amazon/i;
+      // The href must stay a direct, visible link, so the destination's domain is the one place a
+      // store can show up. Everything else (text, aria-label, title, alt, notes, JSON-LD) must be clean.
+      const stripHrefs = (html: string) => html.replace(/\shref="[^"]*"/g, ' href=""');
+      for (const product of products) {
+        const tree = await ProductDetailPage({ params: Promise.resolve({ slug: product.slug }) });
+        const pageHtml = renderToStaticMarkup(tree as React.ReactElement);
+        const cardHtml = renderToStaticMarkup(ProductCard({ product }));
+        for (const [where, html] of [['page', pageHtml], ['card', cardHtml]] as const) {
+          assert.ok(!STORE_NAMES.test(stripHrefs(html)), `${product.sku}: no store name in the ${where} markup`);
+          const buy = parseAnchors(html).filter((a) => a.rel === 'nofollow noopener noreferrer');
+          assert.strictEqual(buy.length, 1, `${product.sku}: one buy button on the ${where}`);
+          assert.strictEqual(buy[0].text, 'Comprar', `${product.sku}: the ${where} button reads exactly Comprar`);
+        }
+        const anchorTag = /<a\s[^>]*rel="nofollow noopener noreferrer"[^>]*>/.exec(pageHtml)![0];
+        assert.ok(!/\saria-label=|\stitle=/.test(anchorTag), `${product.sku}: the buy link adds no aria-label or title`);
+        assert.ok(!/buy_store/.test(pageHtml) && !/buy_store/.test(cardHtml), 'the internal store label never reaches the markup');
+      }
+
+      // A product whose link was cleared (an admin data case) keeps the neutral message and no button.
+      const target = products.find((p) => p.sku === 'VS-ASUS-H7604')!;
+      await db.updateProduct(target.id, { buy_url: null, buy_store: null });
+      const clearedTree = await ProductDetailPage({ params: Promise.resolve({ slug: target.slug }) });
+      const clearedHtml = renderToStaticMarkup(clearedTree as React.ReactElement);
+      assert.ok(clearedHtml.includes(NO_LINK_TEXT), 'cleared link: neutral message on the page');
+      assert.strictEqual(parseAnchors(clearedHtml).filter((a) => a.rel === 'nofollow noopener noreferrer').length, 0);
+      assert.ok(renderToStaticMarkup(ProductCard({ product: { ...target, buy_url: null, buy_store: null } })).includes(NO_LINK_TEXT));
+      await db.updateProduct(target.id, { buy_url: target.buy_url, buy_store: target.buy_store });
+      console.log('✅ Buttons read exactly "Comprar"; no store name outside the href; neutral text only for a cleared link.');
+    }
+
+    // -------------------------------------------------------------------
     // 3. Click handler: beacon without delaying navigation
     // -------------------------------------------------------------------
     console.log('\n--- Test 3: click handler beacon ---');
     {
       const sku = linked[0].sku;
-      const el = BuyLink({ sku, href: linked[0].buy_url!, store: linked[0].buy_store! }) as React.ReactElement<any>;
+      // BuyLink keeps a pending flag, so it must be called inside a render to get its real handler.
+      let el!: React.ReactElement<any>;
+      const Probe = () => {
+        el = BuyLink({ sku, href: linked[0].buy_url! }) as React.ReactElement<any>;
+        return el;
+      };
+      renderToStaticMarkup(React.createElement(Probe));
       assert.strictEqual(el.type, 'a', 'BuyLink renders a plain anchor');
       assert.strictEqual(typeof el.props.onClick, 'function');
       const clickEvent = { preventDefault() { throw new Error('click must not be prevented'); } };
@@ -307,6 +348,8 @@ async function run() {
       assert.strictEqual((await post({ sku: ['VS-ANKER-778'] })).status, 400, 'array sku -> 400');
       assert.strictEqual((await post(null, {}, 'not json')).status, 400, 'malformed JSON -> 400');
       assert.strictEqual((await post(null, {}, '[]')).status, 400, 'non-object JSON -> 400');
+      const msiProduct = (await db.getProducts()).find((p) => p.sku === 'VS-MSI-Z16P')!;
+      await db.updateProduct(msiProduct.id, { buy_url: null, buy_store: null }); // data case: link cleared by an admin
       assert.strictEqual((await post({ sku: 'VS-MSI-Z16P' })).status, 400, 'a product without a buy_url has nothing to attribute -> 400');
       const big = await post({ sku: target.sku, pad: 'p'.repeat(5000) });
       assert.strictEqual(big.status, 413, 'oversized body is refused');
