@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import { CheckoutView } from '@/components/CheckoutView';
 
 export const metadata: Metadata = {
-  title: 'Finalizar Compra | NovaWorkstations',
+  title: 'Finalizar Compra',
   description:
     'Ingresa los datos de entrega de tu pedido y confirma tu compra con el simulador de pago en 1 clic de NovaWorkstations.',
 };

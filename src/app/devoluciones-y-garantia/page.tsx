@@ -1,6 +1,7 @@
 import React from 'react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { absoluteUrl, STORE_NAME } from '@/lib/catalog';
 import {
   RotateCcw,
   ShieldCheck,
@@ -13,10 +14,23 @@ import {
   Zap,
 } from 'lucide-react';
 
+const PAGE_PATH = '/devoluciones-y-garantia';
+const PAGE_DESCRIPTION =
+  '30 días de devolución sin costo y 12 meses de garantía oficial de fábrica en todas las estaciones de trabajo, monitores y componentes profesionales.';
+
 export const metadata: Metadata = {
-  title: 'Devoluciones y Garantía de Fábrica | NovaWorkstations',
-  description:
-    '30 días de devolución sin costo y 12 meses de garantía oficial de fábrica en todas las estaciones de trabajo, monitores y componentes profesionales.',
+  // The root layout title template appends the store name.
+  title: 'Devoluciones y Garantía de Fábrica',
+  description: PAGE_DESCRIPTION,
+  alternates: { canonical: absoluteUrl(PAGE_PATH) },
+  openGraph: {
+    type: 'website',
+    locale: 'es_PE',
+    siteName: STORE_NAME,
+    url: absoluteUrl(PAGE_PATH),
+    title: 'Devoluciones y Garantía de Fábrica | ' + STORE_NAME,
+    description: PAGE_DESCRIPTION,
+  },
 };
 
 export default function DevolucionesGarantiaPage() {

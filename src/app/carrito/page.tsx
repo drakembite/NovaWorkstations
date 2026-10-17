@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import { CartView } from '@/components/CartView';
 
 export const metadata: Metadata = {
-  title: 'Carrito de Compras | NovaWorkstations',
+  title: 'Carrito de Compras',
   description:
     'Revisa los artículos seleccionados en tu carrito de compras, aplica cupones de descuento y continúa al checkout seguro.',
 };

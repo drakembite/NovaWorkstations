@@ -1,6 +1,7 @@
 import React from 'react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { absoluteUrl, STORE_NAME } from '@/lib/catalog';
 import {
   Truck,
   Clock,
@@ -12,10 +13,23 @@ import {
   ArrowRight,
 } from 'lucide-react';
 
+const PAGE_PATH = '/envios-y-entregas';
+const PAGE_DESCRIPTION =
+  'Conoce nuestras políticas de despacho: entrega en 24h en Lima Metropolitana, 48-72h a nivel nacional, corte a las 16:00 hrs y envío gratis en compras mayores a US$ 150.';
+
 export const metadata: Metadata = {
-  title: 'Envíos y Tiempos de Entrega | NovaWorkstations',
-  description:
-    'Conoce nuestras políticas de despacho: entrega en 24h en Lima Metropolitana, 48-72h a nivel nacional, corte a las 16:00 hrs y envío gratis en compras mayores a US$ 150.',
+  // The root layout title template appends the store name.
+  title: 'Envíos y Tiempos de Entrega',
+  description: PAGE_DESCRIPTION,
+  alternates: { canonical: absoluteUrl(PAGE_PATH) },
+  openGraph: {
+    type: 'website',
+    locale: 'es_PE',
+    siteName: STORE_NAME,
+    url: absoluteUrl(PAGE_PATH),
+    title: 'Envíos y Tiempos de Entrega | ' + STORE_NAME,
+    description: PAGE_DESCRIPTION,
+  },
 };
 
 export default function EnviosPage() {

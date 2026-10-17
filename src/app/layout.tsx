@@ -5,8 +5,9 @@ import { CustomHeadScript } from '@/components/CustomHeadScript';
 import { AttributionTracker } from '@/components/AttributionTracker';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
+import { getSiteUrl } from '@/lib/catalog';
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://planiaula.com';
+const siteUrl = getSiteUrl();
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -30,9 +31,6 @@ export const metadata: Metadata = {
   authors: [{ name: 'NovaWorkstations' }],
   creator: 'NovaWorkstations',
   publisher: 'NovaWorkstations',
-  alternates: {
-    canonical: '/',
-  },
   openGraph: {
     type: 'website',
     locale: 'es_PE',
@@ -104,11 +102,6 @@ export default async function RootLayout({
                 '@type': 'PostalAddress',
                 addressLocality: 'Lima',
                 addressCountry: 'PE',
-              },
-              potentialAction: {
-                '@type': 'SearchAction',
-                target: `${siteUrl}/categoria/estaciones-de-trabajo`,
-                'query-input': 'required name=search_term_string',
               },
             }),
           }}

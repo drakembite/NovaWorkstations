@@ -15,7 +15,13 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { getProductBySlug } from '@/lib/db';
-import { normalizeCategorySlug } from '@/lib/catalog';
+import {
+  normalizeCategorySlug,
+  absoluteUrl,
+  buildBreadcrumbJsonLd,
+  serializeJsonLd,
+  STORE_NAME,
+} from '@/lib/catalog';
 import { AddToCartButton } from '@/components/AddToCartButton';
 
 type ProductPageProps = {
@@ -29,21 +35,27 @@ export async function generateMetadata(props: ProductPageProps): Promise<Metadat
 
   if (!product) {
     return {
-      title: 'Producto no encontrado | NovaWorkstations',
+      title: 'Producto no encontrado',
       description: 'El producto solicitado no está disponible en el catálogo de NovaWorkstations.',
     };
   }
 
   const images = product.image_url ? [{ url: product.image_url }] : [];
+  const canonicalUrl = absoluteUrl(`/productos/${product.slug}`);
 
   return {
-    title: `${product.title} | NovaWorkstations`,
+    // The root layout title template appends the store name.
+    title: product.title,
     description: product.short_description,
+    alternates: { canonical: canonicalUrl },
     openGraph: {
-      title: `${product.title} | NovaWorkstations`,
+      title: `${product.title} | ${STORE_NAME}`,
       description: product.short_description,
+      url: canonicalUrl,
+      siteName: STORE_NAME,
       images,
-      type: 'website',
+      // No `type` here: Next's openGraph.type cannot express "product", so the page
+      // renders <meta property="og:type" content="product"> itself (exactly one og:type).
     },
   };
 }
@@ -103,6 +115,12 @@ export default async function ProductDetailPage(props: ProductPageProps) {
     },
   };
 
+  const breadcrumbJsonLd = buildBreadcrumbJsonLd([
+    { name: 'Inicio', path: '/' },
+    { name: product.category, path: `/categoria/${categorySlug}` },
+    { name: product.title, path: `/productos/${product.slug}` },
+  ]);
+
   const jsonLdContent = product.custom_head_jsonld
     ? typeof product.custom_head_jsonld === 'string'
       ? product.custom_head_jsonld
@@ -116,6 +134,12 @@ export default async function ProductDetailPage(props: ProductPageProps) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLdContent }}
       />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(breadcrumbJsonLd) }}
+      />
+      {/* React 19 hoists <meta> into <head>. */}
+      <meta property="og:type" content="product" />
 
       {/* 2. Breadcrumbs Navigation */}
       <nav aria-label="Breadcrumb" className="mb-8 flex items-center gap-2 text-xs text-slate-400">

@@ -8,6 +8,10 @@ import {
   filterProductsByCategory,
   KNOWN_CATEGORIES,
   normalizeCategorySlug,
+  absoluteUrl,
+  buildBreadcrumbJsonLd,
+  serializeJsonLd,
+  STORE_NAME,
 } from '@/lib/catalog';
 import { ProductCard } from '@/components/ProductCard';
 
@@ -20,12 +24,18 @@ export async function generateMetadata(props: PageProps): Promise<Metadata> {
   const rawSlug = resolved?.slug || '';
   const categoryInfo = getCategoryInfo(rawSlug);
 
+  const canonicalUrl = absoluteUrl(`/categoria/${categoryInfo.slug}`);
+
   return {
+    // The root layout title template appends the store name.
     title: categoryInfo.metaTitle,
     description: categoryInfo.metaDescription,
+    alternates: { canonical: canonicalUrl },
     openGraph: {
-      title: categoryInfo.metaTitle,
+      title: `${categoryInfo.metaTitle} | ${STORE_NAME}`,
       description: categoryInfo.metaDescription,
+      url: canonicalUrl,
+      siteName: STORE_NAME,
       type: 'website',
     },
   };
@@ -42,15 +52,23 @@ export default async function CategoryPage(props: PageProps) {
 
   const allCategories = Object.values(KNOWN_CATEGORIES);
 
+  const breadcrumbJsonLd = buildBreadcrumbJsonLd([
+    { name: 'Inicio', path: '/' },
+    { name: categoryInfo.name, path: `/categoria/${categoryInfo.slug}` },
+  ]);
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(breadcrumbJsonLd) }}
+      />
+
       {/* Breadcrumbs */}
       <nav aria-label="Breadcrumb" className="mb-6 flex items-center gap-2 text-xs text-slate-400">
         <Link href="/" className="hover:text-cyan-400 transition-colors">
           Inicio
         </Link>
-        <ChevronRight className="h-3.5 w-3.5 text-slate-600" />
-        <span className="text-slate-500">Categorías</span>
         <ChevronRight className="h-3.5 w-3.5 text-slate-600" />
         <span className="font-semibold text-cyan-400">{categoryInfo.name}</span>
       </nav>

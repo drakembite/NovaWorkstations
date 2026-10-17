@@ -27,6 +27,47 @@ export function getBaseUrl(request: Request): string {
   return 'https://novaworkstations.com';
 }
 
+export const STORE_NAME = 'NovaWorkstations';
+
+/**
+ * Public site origin used for canonical URLs and structured data.
+ * Read lazily from NEXT_PUBLIC_SITE_URL (no trailing slash), with a safe fallback.
+ */
+export function getSiteUrl(): string {
+  const configured = (process.env.NEXT_PUBLIC_SITE_URL || '').trim().replace(/\/+$/, '');
+  return configured || 'https://novaworkstations.com';
+}
+
+/** Absolute URL for a site path such as `/productos/x` (or `/` for the home page). */
+export function absoluteUrl(path: string): string {
+  const site = getSiteUrl();
+  return path === '/' ? `${site}/` : `${site}${path.startsWith('/') ? path : `/${path}`}`;
+}
+
+export interface BreadcrumbItem {
+  name: string;
+  path: string;
+}
+
+/** schema.org BreadcrumbList with absolute item URLs. */
+export function buildBreadcrumbJsonLd(items: BreadcrumbItem[]) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: items.map((item, index) => ({
+      '@type': 'ListItem',
+      position: index + 1,
+      name: item.name,
+      item: absoluteUrl(item.path),
+    })),
+  };
+}
+
+/** Serialises JSON-LD for an inline <script>, neutralising `</script>` sequences. */
+export function serializeJsonLd(data: unknown): string {
+  return JSON.stringify(data).replace(/</g, '\\u003c');
+}
+
 export function formatProduct(product: Product, baseUrl: string) {
   return {
     id: product.id,
@@ -38,6 +79,7 @@ export function formatProduct(product: Product, baseUrl: string) {
     barcode_ean: product.barcode_ean,
     category: product.category,
     price: product.price,
+    currency: product.currency || 'USD',
     compare_at_price: product.compare_at_price,
     stock_quantity: product.stock_quantity,
     in_stock: product.stock_quantity > 0,
@@ -64,7 +106,7 @@ export const KNOWN_CATEGORIES: Record<string, CategoryInfo> = {
     name: 'Estaciones de Trabajo',
     description:
       'Laptops y workstations de grado profesional optimizadas para CAD, modelado 3D, arquitectura y computación de alto rendimiento.',
-    metaTitle: 'Estaciones de Trabajo Profesionales | NovaWorkstations',
+    metaTitle: 'Estaciones de Trabajo Profesionales',
     metaDescription:
       'Equipos de alta potencia para creadores e ingenieros con procesadores de alto rendimiento y tarjetas gráficas dedicadas.',
   },
@@ -73,7 +115,7 @@ export const KNOWN_CATEGORIES: Record<string, CategoryInfo> = {
     name: 'Monitores',
     description:
       'Monitores 4K UHD y paneles OLED profesionales con calibración de color precisa (100% sRGB / DCI-P3) para postproducción y diseño.',
-    metaTitle: 'Monitores Profesionales de Precisión | NovaWorkstations',
+    metaTitle: 'Monitores Profesionales de Precisión',
     metaDescription:
       'Monitores con fidelidad cromática certificada de fábrica, conectividad Thunderbolt y máxima resolución.',
   },
@@ -82,7 +124,7 @@ export const KNOWN_CATEGORIES: Record<string, CategoryInfo> = {
     name: 'Accesorios',
     description:
       'Estaciones de acoplamiento Thunderbolt 4, tabletas y pantallas interactivas de dibujo, y periféricos de grado profesional.',
-    metaTitle: 'Accesorios y Periféricos Profesionales | NovaWorkstations',
+    metaTitle: 'Accesorios y Periféricos Profesionales',
     metaDescription:
       'Docks Thunderbolt 4, tabletas gráficas con pantalla y periféricos diseñados para maximizar tu productividad.',
   },
@@ -91,7 +133,7 @@ export const KNOWN_CATEGORIES: Record<string, CategoryInfo> = {
     name: 'Ofertas',
     description:
       'Hardware profesional con precios especiales y descuentos por tiempo limitado. Equipos nuevos con garantía oficial completa.',
-    metaTitle: 'Ofertas Especiales en Hardware | NovaWorkstations',
+    metaTitle: 'Ofertas Especiales en Hardware',
     metaDescription:
       'Descuentos directos en laptops, monitores y accesorios profesionales. Despacho rápido y garantía de fábrica.',
   },
@@ -100,7 +142,7 @@ export const KNOWN_CATEGORIES: Record<string, CategoryInfo> = {
     name: 'Liquidación',
     description:
       'Oportunidades outlet y liquidación de inventario con precios rebajados en equipos de alta gama con garantía de 12 meses.',
-    metaTitle: 'Liquidación y Outlet de Hardware | NovaWorkstations',
+    metaTitle: 'Liquidación y Outlet de Hardware',
     metaDescription:
       'Últimas unidades en liquidación y precios reducidos en hardware profesional garantizado.',
   },
@@ -134,7 +176,7 @@ export function getCategoryInfo(rawSlug: string): CategoryInfo {
     slug: normalized,
     name: title || 'Categoría',
     description: `Explora nuestros productos de alta gama en la categoría ${title || 'seleccionada'}.`,
-    metaTitle: `${title || 'Categoría'} | NovaWorkstations`,
+    metaTitle: `${title || 'Categoría'}`,
     metaDescription: `Descubre los mejores equipos y hardware profesional en NovaWorkstations.`,
   };
 }

@@ -20,6 +20,16 @@ import ProductDetailPage, {
 } from '../src/app/productos/[slug]/page';
 import { ProductCard } from '../src/components/ProductCard';
 import { AddToCartButton } from '../src/components/AddToCartButton';
+import {
+  STORE_NAME,
+  FALLBACK_SITE_URL,
+  resolveTitle,
+  countOccurrences,
+  findElements,
+  textLeaves,
+  getJsonLdBlocks,
+  withSiteUrl,
+} from './seo-test-utils';
 
 async function testCatalogSsr() {
   console.log('🧪 Starting Catalog & Product Detail SSR Tests...');
@@ -119,8 +129,9 @@ async function testCatalogSsr() {
   console.log('\n--- Test 3: Home Page SSR Component ---');
   {
     assert.ok(homeMeta.title, 'Home page must have metadata title');
+    const { metadata: rootMeta } = await import('../src/app/layout');
     assert.ok(
-      String(homeMeta.title).includes('NovaWorkstations'),
+      resolveTitle(rootMeta.title, homeMeta.title).includes('NovaWorkstations'),
       'Metadata title must include NovaWorkstations'
     );
 
@@ -251,6 +262,123 @@ async function testCatalogSsr() {
     assert.ok(buttonHtml.includes('Cantidad:'), 'AddToCartButton with quantity selector must render quantity label');
 
     console.log('✅ ProductCard and AddToCartButton rendering verified.');
+  }
+
+  // =========================================================================
+  // 7. SEO template fixes: canonical, titles, og:type, JSON-LD (NL-3)
+  // =========================================================================
+  console.log('\n--- Test 7: SEO templates (canonical, titles, og:type, JSON-LD) ---');
+  {
+    const { metadata: rootMeta } = await import('../src/app/layout');
+    const RootLayout = (await import('../src/app/layout')).default;
+
+    // 7.1 Root layout: no canonical inherited by deeper pages, fake SearchAction removed
+    assert.ok(
+      !(rootMeta.alternates && (rootMeta.alternates as any).canonical),
+      'Root layout must not set a canonical that deeper pages would inherit'
+    );
+    const layoutTree = await RootLayout({ children: null });
+    const layoutLd = getJsonLdBlocks(layoutTree);
+    assert.strictEqual(layoutLd.length, 1, 'Layout must emit exactly one store JSON-LD block');
+    assert.strictEqual(layoutLd[0]['@type'], 'ComputerStore');
+    assert.strictEqual(layoutLd[0].name, STORE_NAME);
+    assert.ok(layoutLd[0].address && layoutLd[0].currenciesAccepted, 'Store JSON-LD must keep its other data');
+    assert.ok(!('potentialAction' in layoutLd[0]), 'Fake SearchAction must be removed');
+    assert.ok(!JSON.stringify(layoutLd[0]).includes('SearchAction'), 'No SearchAction anywhere in the store JSON-LD');
+
+    // 7.2 Home: self canonical (static metadata, base resolved at import) + store name exactly once
+    const staticSite = (process.env.NEXT_PUBLIC_SITE_URL || FALLBACK_SITE_URL).replace(/\/+$/, '');
+    assert.strictEqual((homeMeta.alternates as any)?.canonical, `${staticSite}/`, 'Home must canonicalise to itself');
+    {
+      const homeTitle = resolveTitle(rootMeta.title, homeMeta.title);
+      assert.strictEqual(countOccurrences(homeTitle, STORE_NAME), 1, `Home title must contain the store name once: ${homeTitle}`);
+    }
+
+    for (const siteUrl of [undefined, 'https://shop.example.test/']) {
+      const site = (siteUrl ?? FALLBACK_SITE_URL).replace(/\/+$/, '');
+      await withSiteUrl(siteUrl, async () => {
+        // 7.3 Product pages
+        for (const product of allProducts) {
+          const meta = await generateProductMetadata({ params: Promise.resolve({ slug: product.slug }) });
+          const expectedUrl = `${site}/productos/${product.slug}`;
+          assert.strictEqual((meta.alternates as any)?.canonical, expectedUrl, `Product canonical (${product.slug})`);
+
+          const title = resolveTitle(rootMeta.title, meta.title);
+          assert.strictEqual(title, `${product.title} | ${STORE_NAME}`, 'Product title: store name exactly once');
+          const ogTitle = String((meta.openGraph as any)?.title);
+          assert.strictEqual(countOccurrences(ogTitle, STORE_NAME), 1, `og:title must hold the store name once: ${ogTitle}`);
+          assert.strictEqual((meta.openGraph as any)?.url, expectedUrl, 'og:url must match the canonical');
+          assert.strictEqual((meta.openGraph as any)?.type, undefined, 'openGraph.type must not emit a second og:type');
+          assert.ok(!(meta.other && 'og:type' in (meta.other as object)), 'og:type must be emitted only once');
+
+          const tree = await ProductDetailPage({ params: Promise.resolve({ slug: product.slug }) });
+          const ogTypes = findElements(tree, (el) => el.type === 'meta' && el.props?.property === 'og:type');
+          assert.strictEqual(ogTypes.length, 1, 'Product page must emit exactly one og:type');
+          assert.strictEqual(ogTypes[0].props.content, 'product', 'Product og:type must be "product"');
+
+          const crumbs = getJsonLdBlocks(tree).filter((b) => b['@type'] === 'BreadcrumbList');
+          assert.strictEqual(crumbs.length, 1, 'Product page must emit one BreadcrumbList');
+          const items = crumbs[0].itemListElement;
+          assert.deepStrictEqual(
+            items.map((i: any) => [i.position, i.name, i.item]),
+            [
+              [1, 'Inicio', `${site}/`],
+              [2, product.category, `${site}/categoria/${normalizeCategorySlug(product.category)}`],
+              [3, product.title, expectedUrl],
+            ],
+            'BreadcrumbList must be Inicio > Category > Product with absolute URLs'
+          );
+          const nav = findElements(tree, (el) => el.type === 'nav' && el.props?.['aria-label'] === 'Breadcrumb');
+          assert.strictEqual(nav.length, 1);
+          assert.deepStrictEqual(
+            textLeaves(nav[0]),
+            ['Inicio', product.category, product.title],
+            'Visible breadcrumb must match the JSON-LD'
+          );
+        }
+
+        // 7.4 Category pages
+        for (const cat of Object.values(KNOWN_CATEGORIES)) {
+          const meta = await generateCategoryMetadata({ params: Promise.resolve({ slug: cat.slug }) });
+          const expectedUrl = `${site}/categoria/${cat.slug}`;
+          assert.strictEqual((meta.alternates as any)?.canonical, expectedUrl, `Category canonical (${cat.slug})`);
+          const title = resolveTitle(rootMeta.title, meta.title);
+          assert.strictEqual(countOccurrences(title, STORE_NAME), 1, `Category title must hold the store name once: ${title}`);
+          const ogTitle = String((meta.openGraph as any)?.title);
+          assert.strictEqual(countOccurrences(ogTitle, STORE_NAME), 1, `Category og:title once: ${ogTitle}`);
+          assert.strictEqual((meta.openGraph as any)?.url, expectedUrl);
+
+          const tree = await CategoryPage({ params: Promise.resolve({ slug: cat.slug }) });
+          const crumbs = getJsonLdBlocks(tree).filter((b) => b['@type'] === 'BreadcrumbList');
+          assert.strictEqual(crumbs.length, 1, 'Category page must emit one BreadcrumbList');
+          assert.deepStrictEqual(
+            crumbs[0].itemListElement.map((i: any) => [i.position, i.name, i.item]),
+            [
+              [1, 'Inicio', `${site}/`],
+              [2, cat.name, expectedUrl],
+            ],
+            'Category BreadcrumbList must be Inicio > Category'
+          );
+          const nav = findElements(tree, (el) => el.type === 'nav' && el.props?.['aria-label'] === 'Breadcrumb');
+          assert.deepStrictEqual(textLeaves(nav[0]), ['Inicio', cat.name], 'Visible breadcrumb must match the JSON-LD');
+        }
+
+        // 7.5 Unknown category (graceful fallback) keeps the same contract
+        const fallbackMeta = await generateCategoryMetadata({ params: Promise.resolve({ slug: 'categoria-inexistente' }) });
+        assert.strictEqual((fallbackMeta.alternates as any)?.canonical, `${site}/categoria/categoria-inexistente`);
+        assert.strictEqual(
+          countOccurrences(resolveTitle(rootMeta.title, fallbackMeta.title), STORE_NAME),
+          1,
+          'Fallback category title must hold the store name once'
+        );
+
+        // 7.6 Not-found product title must not double the suffix either
+        const missing = await generateProductMetadata({ params: Promise.resolve({ slug: 'no-existe-xyz' }) });
+        assert.strictEqual(countOccurrences(resolveTitle(rootMeta.title, missing.title), STORE_NAME), 1);
+      });
+    }
+
+    console.log('✅ Canonical, single-suffix titles, og:type product, BreadcrumbList and store JSON-LD verified.');
   }
 
   console.log('\n🎉 ALL CATALOG & PRODUCT DETAIL SSR TESTS PASSED SUCCESSFULLY!\n');

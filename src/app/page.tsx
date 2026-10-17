@@ -16,12 +16,16 @@ import {
 } from 'lucide-react';
 import { getProducts } from '@/lib/db';
 import { ProductCard } from '@/components/ProductCard';
+import { absoluteUrl } from '@/lib/catalog';
 
 export const metadata: Metadata = {
-  title: 'NovaWorkstations | Hardware Profesional para Creadores e Ingenieros',
+  // Absolute: the root layout template would append the store name a second time.
+  title: { absolute: 'NovaWorkstations | Hardware Profesional para Creadores e Ingenieros' },
+  alternates: { canonical: absoluteUrl('/') },
   description:
     'Estaciones de trabajo de alto rendimiento, monitores de color de precisión calibrados y accesorios profesionales de estudio. Envíos en 24h en Lima y garantía de 12 meses.',
   openGraph: {
+    url: absoluteUrl('/'),
     title: 'NovaWorkstations | Hardware Profesional',
     description:
       'Estaciones de trabajo de alto rendimiento, monitores calibrados y accesorios profesionales con despacho en 24h.',

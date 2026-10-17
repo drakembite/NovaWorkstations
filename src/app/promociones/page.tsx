@@ -1,6 +1,7 @@
 import React from 'react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { absoluteUrl, STORE_NAME } from '@/lib/catalog';
 import {
   Tag,
   Sparkles,
@@ -14,10 +15,23 @@ import { Promotion } from '@/types/database';
 import { getPromotions } from '@/lib/db';
 import { CouponCard } from '@/components/CouponCard';
 
+const PAGE_PATH = '/promociones';
+const PAGE_DESCRIPTION =
+  'Aprovecha nuestros cupones y promociones exclusivas en estaciones de trabajo, monitores y componentes de alto rendimiento.';
+
 export const metadata: Metadata = {
-  title: 'Promociones y Cupones Vigentes | NovaWorkstations',
-  description:
-    'Aprovecha nuestros cupones y promociones exclusivas en estaciones de trabajo, monitores y componentes de alto rendimiento.',
+  // The root layout title template appends the store name.
+  title: 'Promociones y Cupones Vigentes',
+  description: PAGE_DESCRIPTION,
+  alternates: { canonical: absoluteUrl(PAGE_PATH) },
+  openGraph: {
+    type: 'website',
+    locale: 'es_PE',
+    siteName: STORE_NAME,
+    url: absoluteUrl(PAGE_PATH),
+    title: 'Promociones y Cupones Vigentes | ' + STORE_NAME,
+    description: PAGE_DESCRIPTION,
+  },
 };
 
 export default async function PromocionesPage() {
