@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { updateProduct, getProductById } from '@/lib/db';
 import { Product } from '@/types/database';
-import { validateBuyUrl, validateBuyStore } from '@/lib/buy-url';
+import { validateBuyUrl, validateBuyStore, validateBuyNote } from '@/lib/buy-url';
 
 export const dynamic = 'force-dynamic';
 
@@ -128,6 +128,13 @@ export async function PATCH(
         return NextResponse.json({ error: result.error }, { status: 400 });
       }
       updates.buy_store = result.value;
+    }
+    if (body.buy_note !== undefined) {
+      const result = validateBuyNote(body.buy_note);
+      if (!result.ok) {
+        return NextResponse.json({ error: result.error }, { status: 400 });
+      }
+      updates.buy_note = result.value;
     }
     if (updates.buy_url !== undefined || updates.buy_store !== undefined) {
       const finalUrl = updates.buy_url !== undefined ? updates.buy_url : existing.buy_url;

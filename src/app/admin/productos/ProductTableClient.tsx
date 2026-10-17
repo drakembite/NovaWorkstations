@@ -14,7 +14,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { Product } from '@/types/database';
-import { validateBuyUrl, validateBuyStore } from '@/lib/buy-url';
+import { validateBuyUrl, validateBuyStore, validateBuyNote, BUY_NOTE_MAX_LENGTH } from '@/lib/buy-url';
 
 interface ProductTableClientProps {
   initialProducts: Product[];
@@ -28,6 +28,7 @@ interface RowState {
   short_description: string;
   buy_url: string;
   buy_store: string;
+  buy_note: string;
   isModified: boolean;
   isSaving: boolean;
   saveFeedback: { type: 'success' | 'error'; message: string; time: string } | null;
@@ -50,6 +51,7 @@ export function ProductTableClient({ initialProducts }: ProductTableClientProps)
         short_description: p.short_description,
         buy_url: p.buy_url ?? '',
         buy_store: p.buy_store ?? '',
+        buy_note: p.buy_note ?? '',
         isModified: false,
         isSaving: false,
         saveFeedback: null,
@@ -147,14 +149,17 @@ export function ProductTableClient({ initialProducts }: ProductTableClientProps)
     // Same rules as the admin API: absolute https URL only, and a store name when a URL is set.
     const buyUrlResult = validateBuyUrl(row.buy_url);
     const buyStoreResult = validateBuyStore(row.buy_store);
+    const buyNoteResult = validateBuyNote(row.buy_note);
     const buyError = !buyUrlResult.ok
       ? 'Enlace de compra inválido (debe ser https://)'
       : !buyStoreResult.ok
         ? 'Nombre de tienda inválido'
-        : buyUrlResult.value && !buyStoreResult.value
+        : !buyNoteResult.ok
+          ? 'Nota de compra inválida (texto simple, máx. 300 caracteres)'
+          : buyUrlResult.value && !buyStoreResult.value
           ? 'Indica la tienda del enlace'
           : null;
-    if (buyError || !buyUrlResult.ok || !buyStoreResult.ok) {
+    if (buyError || !buyUrlResult.ok || !buyStoreResult.ok || !buyNoteResult.ok) {
       setRowStates((prev) => ({
         ...prev,
         [id]: {
@@ -187,6 +192,7 @@ export function ProductTableClient({ initialProducts }: ProductTableClientProps)
           short_description: row.short_description.trim(),
           buy_url: buyUrlResult.value,
           buy_store: buyStoreResult.value,
+          buy_note: buyNoteResult.value,
         }),
       });
 
@@ -214,6 +220,7 @@ export function ProductTableClient({ initialProducts }: ProductTableClientProps)
           short_description: updatedProduct.short_description,
           buy_url: updatedProduct.buy_url ?? '',
           buy_store: updatedProduct.buy_store ?? '',
+          buy_note: updatedProduct.buy_note ?? '',
           isModified: false,
           isSaving: false,
           saveFeedback: {
@@ -324,6 +331,7 @@ export function ProductTableClient({ initialProducts }: ProductTableClientProps)
                   short_description: p.short_description,
                   buy_url: p.buy_url ?? '',
                   buy_store: p.buy_store ?? '',
+                  buy_note: p.buy_note ?? '',
                   isModified: false,
                   isSaving: false,
                   saveFeedback: null,
@@ -470,6 +478,15 @@ export function ProductTableClient({ initialProducts }: ProductTableClientProps)
                           value={state.buy_store}
                           onChange={(e) => handleInputChange(p.id, 'buy_store', e.target.value)}
                           className="w-full rounded-lg border border-slate-700/80 bg-slate-950 px-2 py-1.5 text-xs text-slate-200 placeholder-slate-600 focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                        />
+                        <textarea
+                          rows={2}
+                          maxLength={BUY_NOTE_MAX_LENGTH}
+                          placeholder="Nota junto al botón (opcional, texto simple)"
+                          aria-label={`Nota de compra de ${p.sku}`}
+                          value={state.buy_note}
+                          onChange={(e) => handleInputChange(p.id, 'buy_note', e.target.value)}
+                          className="w-full resize-none rounded-lg border border-slate-700/80 bg-slate-950 px-2 py-1.5 text-xs leading-relaxed text-slate-200 placeholder-slate-600 focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
                         />
                       </div>
                     </td>

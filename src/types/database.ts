@@ -20,6 +20,8 @@ export interface Product {
   buy_url: string | null;
   /** Display name of that store, shown as "Comprar en {buy_store}". */
   buy_store: string | null;
+  /** Optional plain-text caveat shown next to the buy button (e.g. an equivalent model). Max 300 chars. */
+  buy_note: string | null;
   created_at: string;
   updated_at: string;
 }

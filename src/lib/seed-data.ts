@@ -27,6 +27,7 @@ export const initialProducts: Product[] = [
     custom_head_jsonld: null,
     buy_url: null,
     buy_store: null,
+    buy_note: null,
     created_at: '2026-10-16T12:00:00.000Z',
     updated_at: '2026-10-16T12:00:00.000Z',
   },
@@ -56,6 +57,7 @@ export const initialProducts: Product[] = [
     custom_head_jsonld: null,
     buy_url: null,
     buy_store: null,
+    buy_note: null,
     created_at: '2026-10-16T12:00:00.000Z',
     updated_at: '2026-10-16T12:00:00.000Z',
   },
@@ -85,6 +87,7 @@ export const initialProducts: Product[] = [
     buy_url:
       'https://www.falabella.com.pe/falabella-pe/product/146298115/Monitor-4K-Dell-UltraSharp-27-U2725QE',
     buy_store: 'Falabella Perú',
+    buy_note: null,
     created_at: '2026-10-16T12:00:00.000Z',
     updated_at: '2026-10-16T12:00:00.000Z',
   },
@@ -111,8 +114,10 @@ export const initialProducts: Product[] = [
     image_url:
       'https://images.unsplash.com/photo-1585792180666-f7347c490ee2?auto=format&fit=crop&w=800&q=80',
     custom_head_jsonld: null,
-    buy_url: null,
-    buy_store: null,
+    buy_url:
+      'https://www.amazon.com/dp/B08CVTTNN4',
+    buy_store: 'Amazon',
+    buy_note: null,
     created_at: '2026-10-16T12:00:00.000Z',
     updated_at: '2026-10-16T12:00:00.000Z',
   },
@@ -139,8 +144,10 @@ export const initialProducts: Product[] = [
     image_url:
       'https://images.unsplash.com/photo-1541807084-5c52b6b3adef?auto=format&fit=crop&w=800&q=80',
     custom_head_jsonld: null,
-    buy_url: null,
-    buy_store: null,
+    buy_url:
+      'https://www.amazon.com/dp/B0CB77K1RK',
+    buy_store: 'Amazon',
+    buy_note: null,
     created_at: '2026-10-16T12:00:00.000Z',
     updated_at: '2026-10-16T12:00:00.000Z',
   },
@@ -167,8 +174,11 @@ export const initialProducts: Product[] = [
     image_url:
       'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?auto=format&fit=crop&w=800&q=80',
     custom_head_jsonld: null,
-    buy_url: null,
-    buy_store: null,
+    buy_url:
+      'https://www.falabella.com.pe/falabella-pe/product/150403595/lenovo-thinkpad-p16-gen2-16-wuxga-ips-intel-core-i7-13700hx-32gb-ddr5-alto-rendimiento/150403598',
+    buy_store: 'Falabella Perú',
+    buy_note:
+      'Misma línea ThinkPad P16 Gen 2 en otra configuración (i7-13700HX, 32 GB): el código de parte puede diferir.',
     created_at: '2026-10-16T12:00:00.000Z',
     updated_at: '2026-10-16T12:00:00.000Z',
   },
@@ -195,8 +205,11 @@ export const initialProducts: Product[] = [
     image_url:
       'https://images.unsplash.com/photo-1551645120-d70bfe84c826?auto=format&fit=crop&w=800&q=80',
     custom_head_jsonld: null,
-    buy_url: null,
-    buy_store: null,
+    buy_url:
+      'https://www.falabella.com.pe/falabella-pe/product/119724529/monitor-benq-pd3205u-ips-32-para-diseno-profesional/119724530',
+    buy_store: 'Falabella Perú',
+    buy_note:
+      'Modelo equivalente actual: BenQ PD3205U. El PD3220U está descontinuado.',
     created_at: '2026-10-16T12:00:00.000Z',
     updated_at: '2026-10-16T12:00:00.000Z',
   },
@@ -226,6 +239,7 @@ export const initialProducts: Product[] = [
     buy_url:
       'https://www.falabella.com.pe/falabella-pe/product/156636837/monitor-asus-proart-pa329crv-32-ips-4k-uhd-srgb-adobe-rgb-pivot-altavoz-dp-hdmi',
     buy_store: 'Falabella Perú',
+    buy_note: null,
     created_at: '2026-10-16T12:00:00.000Z',
     updated_at: '2026-10-16T12:00:00.000Z',
   },
@@ -255,6 +269,7 @@ export const initialProducts: Product[] = [
     buy_url:
       'https://www.amazon.com/Wacom-Cintiq-Drawing-Tablet-DTK1660K0A/dp/B07L77GTTY',
     buy_store: 'Amazon',
+    buy_note: null,
     created_at: '2026-10-16T12:00:00.000Z',
     updated_at: '2026-10-16T12:00:00.000Z',
   },
@@ -283,6 +298,7 @@ export const initialProducts: Product[] = [
     buy_url:
       'https://www.falabella.com.pe/falabella-pe/product/144813643/HUION-Kamvas-Pro-16-4K-UHD-Tableta-Grafica-con-Pantalla',
     buy_store: 'Falabella Perú',
+    buy_note: null,
     created_at: '2026-10-16T12:00:00.000Z',
     updated_at: '2026-10-16T12:00:00.000Z',
   },
@@ -312,6 +328,7 @@ export const initialProducts: Product[] = [
     buy_url:
       'https://www.amazon.com/dp/B09GK8LBWS',
     buy_store: 'Amazon',
+    buy_note: null,
     created_at: '2026-10-16T12:00:00.000Z',
     updated_at: '2026-10-16T12:00:00.000Z',
   },
@@ -340,6 +357,7 @@ export const initialProducts: Product[] = [
     buy_url:
       'https://www.amazon.com/Anker-Thunderbolt-Docking-Charging-Ethernet/dp/B0BMXSR2L7',
     buy_store: 'Amazon',
+    buy_note: null,
     created_at: '2026-10-16T12:00:00.000Z',
     updated_at: '2026-10-16T12:00:00.000Z',
   },

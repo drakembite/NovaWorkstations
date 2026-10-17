@@ -10,7 +10,7 @@ import React from 'react';
 import { initialProducts, initialPromotions, initialStoreSettings } from '../src/lib/seed-data';
 import { validateBuyUrl, validateBuyStore, BUY_URL_MAX_LENGTH } from '../src/lib/buy-url';
 
-// The six products that have a verified store page today. Adding a link later is a data-only
+// The ten products that have a verified store page today. Adding a link later is a data-only
 // change: replace `buy_url: null` / `buy_store: null` in src/lib/seed-data.ts.
 const EXPECTED_LINKS: Record<string, { buy_store: string; buy_url: string }> = {
   'VS-DELL-U27': {
@@ -37,6 +37,18 @@ const EXPECTED_LINKS: Record<string, { buy_store: string; buy_url: string }> = {
   'VS-ANKER-778': {
     buy_store: 'Amazon',
     buy_url: 'https://www.amazon.com/Anker-Thunderbolt-Docking-Charging-Ethernet/dp/B0BMXSR2L7',
+  },
+  'VS-LG-27UN850': { buy_store: 'Amazon', buy_url: 'https://www.amazon.com/dp/B08CVTTNN4' },
+  'VS-HP-ZBOOK16': { buy_store: 'Amazon', buy_url: 'https://www.amazon.com/dp/B0CB77K1RK' },
+  'VS-BENQ-PD32': {
+    buy_store: 'Falabella Perú',
+    buy_url:
+      'https://www.falabella.com.pe/falabella-pe/product/119724529/monitor-benq-pd3205u-ips-32-para-diseno-profesional/119724530',
+  },
+  'VS-LEN-P16G2': {
+    buy_store: 'Falabella Perú',
+    buy_url:
+      'https://www.falabella.com.pe/falabella-pe/product/150403595/lenovo-thinkpad-p16-gen2-16-wuxga-ips-intel-core-i7-13700hx-32gb-ddr5-alto-rendimiento/150403598',
   },
 };
 
@@ -93,7 +105,7 @@ async function run() {
   // ---------------------------------------------------------------------
   // 2. Seed data
   // ---------------------------------------------------------------------
-  console.log('\n--- Test 2: seed carries the six verified links ---');
+  console.log('\n--- Test 2: seed carries the ten verified links ---');
   {
     assert.strictEqual(initialProducts.length, 12);
     for (const p of initialProducts) {
@@ -109,8 +121,9 @@ async function run() {
       }
       assert.strictEqual(p.currency, 'USD', 'currency stays USD');
     }
-    assert.strictEqual(Object.keys(EXPECTED_LINKS).length, 6);
-    console.log('✅ Six products linked, six empty, currency untouched.');
+    assert.strictEqual(Object.keys(EXPECTED_LINKS).length, 10);
+    assert.strictEqual(initialProducts.filter((p) => p.buy_url).length, 10, 'exactly ten seed products are linked');
+    console.log('✅ Ten products linked, two empty, currency untouched.');
   }
 
   // ---------------------------------------------------------------------
@@ -122,7 +135,7 @@ async function run() {
   try {
     fs.mkdirSync(path.join(tmp, 'data'));
     const legacyProducts: any[] = initialProducts.map((p) => {
-      const { buy_url, buy_store, ...legacy } = p as any;
+      const { buy_url, buy_store, buy_note, ...legacy } = p as any;
       return { ...legacy };
     });
     const bySku = (sku: string) => legacyProducts.find((p) => p.sku === sku);

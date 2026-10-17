@@ -53,7 +53,7 @@ function isBlank(value: unknown): boolean {
 
 /**
  * Non-destructive backfill of the outbound buy link from the seed, matched by SKU.
- * Fills `buy_url` / `buy_store` only where the stored value is missing, null or empty, so an
+ * Fills `buy_url` / `buy_store` / `buy_note` only where the stored value is missing, null or empty, so an
  * admin edit is never overwritten. Legacy rows without the fields are normalised to null.
  * Returns true when anything changed (the caller persists the file).
  */
@@ -73,6 +73,13 @@ function backfillBuyLinks(products: Product[]): boolean {
       const next = seed?.buy_store ?? null;
       if (product.buy_store !== next) {
         product.buy_store = next;
+        changed = true;
+      }
+    }
+    if (isBlank(product.buy_note)) {
+      const next = seed?.buy_note ?? null;
+      if (product.buy_note !== next) {
+        product.buy_note = next;
         changed = true;
       }
     }
@@ -246,6 +253,7 @@ async function checkAndInitPostgres(): Promise<boolean> {
 
             ALTER TABLE products ADD COLUMN IF NOT EXISTS buy_url TEXT NULL;
             ALTER TABLE products ADD COLUMN IF NOT EXISTS buy_store VARCHAR(120) NULL;
+            ALTER TABLE products ADD COLUMN IF NOT EXISTS buy_note TEXT NULL;
 
             CREATE TABLE IF NOT EXISTS promotions (
               id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -311,8 +319,8 @@ async function checkAndInitPostgres(): Promise<boolean> {
                   id, sku, slug, title, brand, mpn, barcode_ean, category,
                   price, compare_at_price, currency, stock_quantity,
                   short_description, specs_json, shipping_text, image_url,
-                  custom_head_jsonld, buy_url, buy_store, created_at, updated_at
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)`,
+                  custom_head_jsonld, buy_url, buy_store, buy_note, created_at, updated_at
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)`,
                 [
                   prod.id,
                   prod.sku,
@@ -333,6 +341,7 @@ async function checkAndInitPostgres(): Promise<boolean> {
                   prod.custom_head_jsonld ? JSON.stringify(prod.custom_head_jsonld) : null,
                   prod.buy_url,
                   prod.buy_store,
+                  prod.buy_note,
                   prod.created_at,
                   prod.updated_at,
                 ]
@@ -347,9 +356,10 @@ async function checkAndInitPostgres(): Promise<boolean> {
             await client.query(
               `UPDATE products SET
                  buy_url = COALESCE(NULLIF(buy_url, ''), $1),
-                 buy_store = COALESCE(NULLIF(buy_store, ''), $2)
-               WHERE sku = $3`,
-              [prod.buy_url, prod.buy_store, prod.sku]
+                 buy_store = COALESCE(NULLIF(buy_store, ''), $2),
+                 buy_note = COALESCE(NULLIF(buy_note, ''), $3)
+               WHERE sku = $4`,
+              [prod.buy_url, prod.buy_store, prod.buy_note, prod.sku]
             );
           }
 
@@ -438,6 +448,7 @@ function mapProductRow(row: any): Product {
       : null,
     buy_url: row.buy_url ?? null,
     buy_store: row.buy_store ?? null,
+    buy_note: row.buy_note ?? null,
     created_at: new Date(row.created_at).toISOString(),
     updated_at: new Date(row.updated_at).toISOString(),
   };

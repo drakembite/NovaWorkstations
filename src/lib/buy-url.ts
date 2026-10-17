@@ -3,6 +3,7 @@
 
 export const BUY_URL_MAX_LENGTH = 2000;
 export const BUY_STORE_MAX_LENGTH = 120;
+export const BUY_NOTE_MAX_LENGTH = 300;
 
 export type FieldResult = { ok: true; value: string | null } | { ok: false; error: string };
 
@@ -54,6 +55,30 @@ export function validateBuyStore(input: unknown): FieldResult {
   if (value === '') return { ok: true, value: null };
   if (value.length > BUY_STORE_MAX_LENGTH) {
     return { ok: false, error: `buy_store must be at most ${BUY_STORE_MAX_LENGTH} characters` };
+  }
+  return { ok: true, value };
+}
+
+/**
+ * Optional caveat shown next to the buy button. Plain text only: trimmed, at most 300 characters,
+ * no angle brackets (so no HTML) and no control characters. Empty, blank and null clear it.
+ * The renderer escapes it as well; this is the first of two defences.
+ */
+export function validateBuyNote(input: unknown): FieldResult {
+  if (input === null || input === undefined) return { ok: true, value: null };
+  if (typeof input !== 'string') return { ok: false, error: 'buy_note must be a string' };
+
+  const value = input.trim();
+  if (value === '') return { ok: true, value: null };
+  if (value.length > BUY_NOTE_MAX_LENGTH) {
+    return { ok: false, error: `buy_note must be at most ${BUY_NOTE_MAX_LENGTH} characters` };
+  }
+  if (/[<>]/.test(value)) {
+    return { ok: false, error: 'buy_note must be plain text (no HTML)' };
+  }
+  // eslint-disable-next-line no-control-regex
+  if (/[\u0000-\u001f\u007f]/.test(value)) {
+    return { ok: false, error: 'buy_note must not contain control characters' };
   }
   return { ok: true, value };
 }

@@ -63,8 +63,8 @@ async function run() {
     assert.strictEqual(products.length, 12);
     const linked = products.filter((p) => p.buy_url);
     const unlinked = products.filter((p) => !p.buy_url);
-    assert.strictEqual(linked.length, 6, 'six products have a link today');
-    assert.strictEqual(unlinked.length, 6);
+    assert.strictEqual(linked.length, 10, 'ten products have a link today');
+    assert.strictEqual(unlinked.length, 2);
 
     const ProductDetailPage = (await import('../src/app/productos/[slug]/page')).default;
     const { ProductCard } = await import('../src/components/ProductCard');

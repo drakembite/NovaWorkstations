@@ -37,10 +37,12 @@ async function run() {
   {
     const addUrl = indexOf(/ALTER TABLE products ADD COLUMN IF NOT EXISTS buy_url TEXT/i);
     const addStore = indexOf(/ALTER TABLE products ADD COLUMN IF NOT EXISTS buy_store/i);
+    const addNote = indexOf(/ALTER TABLE products ADD COLUMN IF NOT EXISTS buy_note TEXT/i);
+    assert.ok(addNote >= 0, 'buy_note column is added with ADD COLUMN IF NOT EXISTS');
     assert.ok(addUrl >= 0, 'buy_url column is added with ADD COLUMN IF NOT EXISTS');
     assert.ok(addStore >= 0, 'buy_store column is added with ADD COLUMN IF NOT EXISTS');
     const firstInsert = indexOf(/INSERT INTO products/i);
-    assert.ok(firstInsert > addUrl && firstInsert > addStore, 'columns exist before any product is inserted');
+    assert.ok(firstInsert > addUrl && firstInsert > addStore && firstInsert > addNote, 'columns exist before any product is inserted');
     for (const s of sqls) {
       assert.ok(!/\bDROP\b/i.test(s), `migration must not drop anything: ${s.slice(0, 60)}`);
       assert.ok(!/\bTRUNCATE\b/i.test(s), 'migration must not truncate');
@@ -54,13 +56,17 @@ async function run() {
     assert.strictEqual(inserts.length, 12);
     for (const ins of inserts) {
       assert.ok(/buy_url/.test(ins.sql) && /buy_store/.test(ins.sql), 'INSERT lists buy_url and buy_store');
+      assert.ok(/buy_note/.test(ins.sql), 'INSERT lists buy_note');
     }
     const dell = initialProducts.find((p) => p.sku === 'VS-DELL-U27')!;
     const dellInsert = inserts.find((i) => i.params?.includes('VS-DELL-U27'))!;
     assert.ok(dellInsert.params!.includes(dell.buy_url), 'Dell INSERT carries its URL');
     assert.ok(dellInsert.params!.includes(dell.buy_store), 'Dell INSERT carries its store');
     const msiInsert = inserts.find((i) => i.params?.includes('VS-MSI-Z16P'))!;
-    assert.strictEqual(msiInsert.params!.filter((v) => v === null).length >= 2, true, 'unlinked product inserts nulls');
+    assert.strictEqual(msiInsert.params!.filter((v) => v === null).length >= 3, true, 'unlinked product inserts nulls');
+    const benq = initialProducts.find((p) => p.sku === 'VS-BENQ-PD32')!;
+    const benqInsert = inserts.find((i) => i.params?.includes('VS-BENQ-PD32'))!;
+    assert.ok(benq.buy_note && benqInsert.params!.includes(benq.buy_note), 'BenQ INSERT carries its note');
     console.log('✅ Fresh databases are seeded with the links.');
   }
 
@@ -73,13 +79,14 @@ async function run() {
       const sql = u.sql.replace(/\s+/g, ' ');
       assert.ok(/buy_url = COALESCE\(NULLIF\(buy_url, ''\), \$1\)/.test(sql), 'buy_url keeps any non-empty stored value');
       assert.ok(/buy_store = COALESCE\(NULLIF\(buy_store, ''\), \$2\)/.test(sql), 'buy_store keeps any non-empty stored value');
-      assert.ok(/WHERE sku = \$3/.test(sql), 'backfill is scoped to one SKU');
+      assert.ok(/buy_note = COALESCE\(NULLIF\(buy_note, ''\), \$3\)/.test(sql), 'buy_note keeps any non-empty stored value');
+      assert.ok(/WHERE sku = \$4/.test(sql), 'backfill is scoped to one SKU');
       assert.ok(!/updated_at/.test(sql), 'backfill does not touch updated_at');
     }
     for (const p of linked) {
-      const match = updates.find((u) => u.params?.[2] === p.sku);
+      const match = updates.find((u) => u.params?.[3] === p.sku);
       assert.ok(match, `backfill exists for ${p.sku}`);
-      assert.deepStrictEqual(match!.params, [p.buy_url, p.buy_store, p.sku]);
+      assert.deepStrictEqual(match!.params, [p.buy_url, p.buy_store, p.buy_note, p.sku]);
     }
     console.log('✅ Backfill only fills null/empty values and never overwrites an edit.');
   }
