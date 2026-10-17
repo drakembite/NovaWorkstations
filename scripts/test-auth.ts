@@ -49,6 +49,35 @@ async function captureErrors<T>(fn: () => Promise<T>): Promise<{ result: T; logs
   }
 }
 
+type AuthModule = typeof import('../src/lib/auth');
+
+/**
+ * Evaluates src/lib/auth.ts as a brand new module instance, simulating a separate JS realm
+ * (the Node route handlers and the Edge middleware each evaluate their own copy in `next dev`).
+ * Any state a previous instance may have left on globalThis is cleared first, so the instance
+ * cannot share anything with the others except the environment.
+ */
+async function loadAuthRealm(tag: string): Promise<AuthModule> {
+  delete (globalThis as Record<string, unknown>)['__nw_dev_only_session_secret__'];
+  const specifier = `../src/lib/auth?realm=${tag}`;
+  return (await import(specifier)) as AuthModule;
+}
+
+/** Captures console.warn output while `fn` runs. */
+async function captureWarnings<T>(fn: () => Promise<T>): Promise<{ result: T; logs: string }> {
+  const original = console.warn;
+  const lines: string[] = [];
+  console.warn = (...args: unknown[]) => {
+    lines.push(args.map((a) => (a instanceof Error ? a.message : String(a))).join(' '));
+  };
+  try {
+    const result = await fn();
+    return { result, logs: lines.join('\n') };
+  } finally {
+    console.warn = original;
+  }
+}
+
 async function runAuthTests() {
   console.log('🧪 Starting NovaWorkstations Auth & Admin Protection Tests...\n');
 
@@ -277,7 +306,7 @@ async function runAuthTests() {
       createSessionToken(ADMIN_USERNAME)
     );
 
-    // 7.3 Development / test without the variable: generated dev-only fallback works
+    // 7.3 Development / test without the variable: the fixed dev-only fallback works
     for (const nodeEnv of ['development', 'test']) {
       await withEnv({ NODE_ENV: nodeEnv, VERCEL: undefined, ADMIN_SESSION_SECRET: undefined }, async () => {
         const t = await createSessionToken(ADMIN_USERNAME);
@@ -344,7 +373,111 @@ async function runAuthTests() {
       assert.ok(!prodLogs.includes(leaked) && !okLogs.includes(leaked), 'Logs must never contain a secret value');
     }
 
-    console.log('✅ No committed secret; production fails closed; dev fallback works.');
+    // 7.7 Two independent module instances (Node route handler vs Edge middleware realms) agree
+    //     on the secret in development when no secret env var is set.
+    {
+      const devEnv = { NODE_ENV: 'development', VERCEL: undefined, ADMIN_SESSION_SECRET: undefined };
+      const { result: crossRealm, logs: warnLogs } = await captureWarnings(() =>
+        withEnv(devEnv, async () => {
+          const nodeRealm = await loadAuthRealm('node-realm');
+          const token = await nodeRealm.createSessionToken(ADMIN_USERNAME);
+          const edgeRealm = await loadAuthRealm('edge-realm');
+          assert.notStrictEqual(nodeRealm, edgeRealm, 'The two realms must be distinct module instances');
+          const second = await nodeRealm.createSessionToken(ADMIN_USERNAME);
+          return { token, second, accepted: await edgeRealm.verifySessionToken(token) };
+        })
+      );
+      assert.strictEqual(crossRealm.accepted, true, 'A token signed in one realm must verify in another realm in development');
+      assert.strictEqual(
+        (warnLogs.match(/insecure development session secret/g) || []).length,
+        2,
+        'Each process realm warns exactly once (one per module instance), not once per call'
+      );
+    }
+
+    // 7.8 The dev warning is emitted once per process, is secret-free, and points at .env.local
+    {
+      const { logs } = await captureWarnings(() =>
+        withEnv({ NODE_ENV: 'development', VERCEL: undefined, ADMIN_SESSION_SECRET: undefined }, async () => {
+          const realm = await loadAuthRealm('warn-once');
+          const t = await realm.createSessionToken(ADMIN_USERNAME);
+          await realm.verifySessionToken(t);
+          await realm.verifySessionToken(t);
+        })
+      );
+      assert.strictEqual((logs.match(/insecure development session secret/g) || []).length, 1, 'The dev warning must be logged once');
+      assert.ok(logs.includes('ADMIN_SESSION_SECRET') && logs.includes('.env.local'), 'The dev warning must say how to fix it');
+    }
+
+    // 7.9 A token signed with the dev-only fallback is never accepted in production
+    //     (no secret, or an empty one), and creating tokens there fails closed too.
+    {
+      const devSignedToken = await withEnv(
+        { NODE_ENV: 'development', VERCEL: undefined, ADMIN_SESSION_SECRET: undefined },
+        async () => (await loadAuthRealm('dev-signer')).createSessionToken(ADMIN_USERNAME)
+      );
+      for (const secretValue of [undefined, '']) {
+        const { result: prod } = await captureErrors(() =>
+          withEnv({ NODE_ENV: 'production', VERCEL: undefined, ADMIN_SESSION_SECRET: secretValue }, async () => {
+            const realm = await loadAuthRealm(`prod-${secretValue === undefined ? 'unset' : 'empty'}`);
+            let createError: unknown = null;
+            try {
+              await realm.createSessionToken(ADMIN_USERNAME);
+            } catch (e) {
+              createError = e;
+            }
+            return { createError, verified: await realm.verifySessionToken(devSignedToken) };
+          })
+        );
+        assert.ok(prod.createError, `Production (secret ${JSON.stringify(secretValue)}) must refuse to create sessions`);
+        assert.strictEqual(prod.verified, false, `Production (secret ${JSON.stringify(secretValue)}) must not accept a dev-signed token`);
+      }
+    }
+
+    // 7.10 VERCEL set without a secret fails closed in a fresh realm, even outside NODE_ENV=production
+    {
+      const devSignedToken = await withEnv(
+        { NODE_ENV: 'development', VERCEL: undefined, ADMIN_SESSION_SECRET: undefined },
+        async () => (await loadAuthRealm('dev-signer-2')).createSessionToken(ADMIN_USERNAME)
+      );
+      for (const secretValue of [undefined, '']) {
+        const { result: vercel } = await captureErrors(() =>
+          withEnv({ NODE_ENV: 'development', VERCEL: '1', ADMIN_SESSION_SECRET: secretValue }, async () => {
+            const realm = await loadAuthRealm(`vercel-${secretValue === undefined ? 'unset' : 'empty'}`);
+            let createError: unknown = null;
+            try {
+              await realm.createSessionToken(ADMIN_USERNAME);
+            } catch (e) {
+              createError = e;
+            }
+            return { createError, verified: await realm.verifySessionToken(devSignedToken) };
+          })
+        );
+        assert.ok(vercel.createError, 'VERCEL without a secret must refuse to create sessions');
+        assert.strictEqual(vercel.verified, false, 'VERCEL without a secret must not accept a dev-signed token');
+      }
+    }
+
+    // 7.11 A configured ADMIN_SESSION_SECRET is preferred over the dev fallback, in every realm
+    {
+      const configured = 'unit-test-secret-C-0123456789abcdef';
+      const out = await withEnv({ NODE_ENV: 'development', VERCEL: undefined, ADMIN_SESSION_SECRET: configured }, async () => {
+        const a = await loadAuthRealm('configured-a');
+        const b = await loadAuthRealm('configured-b');
+        const token = await a.createSessionToken(ADMIN_USERNAME);
+        const sameAcrossRealms = await b.verifySessionToken(token);
+        const noSecretRealm = (
+          await captureWarnings(() =>
+            withEnv({ ADMIN_SESSION_SECRET: undefined }, async () => (await loadAuthRealm('configured-c')).verifySessionToken(token))
+          )
+        ).result;
+        return { sameAcrossRealms, noSecretRealm };
+      });
+      assert.strictEqual(out.sameAcrossRealms, true, 'A configured secret must be shared by every realm');
+      assert.strictEqual(out.noSecretRealm, false, 'A token signed with the configured secret must not verify with the dev fallback');
+    }
+
+    console.log('✅ No committed secret; production fails closed; dev fallback is shared across realms.');
   }
 
   console.log('\n🎉 ALL AUTH & ADMIN PROTECTION TESTS PASSED SUCCESSFULLY! 🎉\n');

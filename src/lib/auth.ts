@@ -2,28 +2,32 @@ export const ADMIN_USERNAME = 'AdminPrueba1234';
 export const ADMIN_PASSWORD = 'AdminPassword1234';
 export const ADMIN_COOKIE_NAME = 'nw_admin_session';
 
-const DEV_FALLBACK_KEY = '__nw_dev_only_session_secret__';
-
 /**
- * Dev-only session secret, generated randomly once per process (never committed).
- * It lives on globalThis so module re-evaluation (HMR) keeps sessions valid.
- * Set ADMIN_SESSION_SECRET (e.g. in .env.local) for sessions that survive restarts
- * and are shared across the Edge middleware and the Node route handlers.
+ * INSECURE, DEVELOPMENT-ONLY session secret. It is intentionally a fixed, public constant:
+ * under `next dev` the Node route handlers (which sign the session cookie) and the Edge
+ * middleware (which verifies it) are evaluated in separate JS realms that share nothing but
+ * the environment, so a random or per-realm secret would make every login bounce back to
+ * /admin/login. It is only ever used outside production (NODE_ENV !== 'production' and
+ * VERCEL unset) when ADMIN_SESSION_SECRET is unset or empty. Set ADMIN_SESSION_SECRET in
+ * .env.local to override it.
  */
-function getDevOnlyFallbackSecret(): string {
-  const store = globalThis as unknown as Record<string, string | undefined>;
-  let secret = store[DEV_FALLBACK_KEY];
-  if (!secret) {
-    secret = bytesToHex(crypto.getRandomValues(new Uint8Array(32)));
-    store[DEV_FALLBACK_KEY] = secret;
-  }
-  return secret;
+const INSECURE_DEV_SESSION_SECRET = 'nw-insecure-development-only-session-secret';
+
+let devSecretWarned = false;
+
+function warnDevSecretOnce(): void {
+  if (devSecretWarned) return;
+  devSecretWarned = true;
+  console.warn(
+    '[auth] Using the insecure development session secret; set ADMIN_SESSION_SECRET in .env.local.'
+  );
 }
 
 /**
  * Resolves the HMAC secret. Production (NODE_ENV=production or VERCEL set) requires
  * ADMIN_SESSION_SECRET: when it is missing this logs a secret-free error and returns
- * null so that authentication fails closed.
+ * null so that authentication fails closed. Outside production the fixed dev-only
+ * constant is used (with a one-time warning) so that every runtime agrees on it.
  */
 function resolveAuthSecret(): string | null {
   const configured = process.env.ADMIN_SESSION_SECRET;
@@ -36,7 +40,8 @@ function resolveAuthSecret(): string | null {
     return null;
   }
 
-  return getDevOnlyFallbackSecret();
+  warnDevSecretOnce();
+  return INSECURE_DEV_SESSION_SECRET;
 }
 
 function bytesToHex(bytes: Uint8Array): string {
