@@ -14,6 +14,8 @@ const EXPECTED_NOTES: Record<string, string> = {
   'VS-BENQ-PD32': 'Modelo equivalente actual: BenQ PD3205U. El PD3220U está descontinuado.',
   'VS-LEN-P16G2':
     'Misma línea ThinkPad P16 Gen 2 en otra configuración (i7-13700HX, 32 GB): el código de parte puede diferir.',
+  'VS-MSI-Z16P': 'Modelo equivalente disponible: MSI Creator Z16 (A11UET), versión anterior de la línea.',
+  'VS-ASUS-H7604': 'Te lleva a los resultados de búsqueda de modelos ProArt Studiobook 16 OLED disponibles.',
 };
 
 // Fields that must stay byte-identical to what the 12 seed products carried before buy_note existed.
@@ -77,13 +79,13 @@ async function run() {
   // ---------------------------------------------------------------------
   // 2. Seed
   // ---------------------------------------------------------------------
-  console.log('\n--- Test 2: seed carries exactly two notes and ten links ---');
+  console.log('\n--- Test 2: seed carries exactly four notes and twelve links ---');
   {
     assert.strictEqual(initialProducts.length, 12);
     const linked = initialProducts.filter((p) => p.buy_url);
-    assert.strictEqual(linked.length, 10, 'exactly 10 linked products');
+    assert.strictEqual(linked.length, 12, 'all 12 products are linked');
     const withNote = initialProducts.filter((p) => p.buy_note);
-    assert.deepStrictEqual(withNote.map((p) => p.sku).sort(), Object.keys(EXPECTED_NOTES).sort(), 'exactly two notes');
+    assert.deepStrictEqual(withNote.map((p) => p.sku).sort(), Object.keys(EXPECTED_NOTES).sort(), 'exactly four notes');
     for (const p of initialProducts) {
       assert.ok('buy_note' in p, `${p.sku} declares buy_note`);
       assert.strictEqual(p.buy_note ?? null, EXPECTED_NOTES[p.sku] ?? null, `${p.sku} note`);
@@ -92,8 +94,8 @@ async function run() {
     }
     for (const sku of ['VS-MSI-Z16P', 'VS-ASUS-H7604']) {
       const p = initialProducts.find((x) => x.sku === sku)!;
-      assert.strictEqual(p.buy_url, null, `${sku} stays unlinked`);
-      assert.strictEqual(p.buy_store, null);
+      assert.ok(p.buy_url && p.buy_store, `${sku} has an (approximate) link and an internal store label`);
+      assert.ok(p.buy_note, `${sku} says the link is approximate`);
     }
     for (const [sku, frozen] of Object.entries(FROZEN)) {
       const p = initialProducts.find((x) => x.sku === sku)!;
@@ -104,7 +106,7 @@ async function run() {
     }
     const benq = initialProducts.find((p) => p.sku === 'VS-BENQ-PD32')!;
     assert.strictEqual(benq.title, 'Monitor BenQ DesignVue PD3220U 32 4K', 'BenQ title keeps the discontinued model');
-    console.log('✅ Seed: 10 links, 2 notes, frozen fields untouched.');
+    console.log('✅ Seed: 12 links, 4 notes, frozen fields untouched.');
   }
 
   // The db module resolves its data directory from the cwd at import time: use one throwaway
@@ -156,7 +158,7 @@ async function run() {
       assert.ok(!noNote.includes('data-buy-note'), 'a linked product without a note renders no note element');
 
       const unlinked = renderToStaticMarkup(
-        React.createElement(BuyAction, { product: { ...msi, buy_note: 'No debería verse' }, compact })
+        React.createElement(BuyAction, { product: { ...msi, buy_url: null, buy_note: 'No debería verse' }, compact })
       );
       assert.ok(!unlinked.includes('No debería verse'), 'a note is never shown without a link');
       assert.ok(!unlinked.includes('data-buy-note'));
@@ -183,7 +185,7 @@ async function run() {
         const expected = EXPECTED_NOTES_STORED[product.sku];
         if (expected) {
           const at = html.indexOf(escapeHtml(expected));
-          assert.ok(at > html.indexOf('Comprar en'), `${product.sku}: note rendered after the buy button on the page`);
+          assert.ok(at > html.indexOf('rel="nofollow noopener noreferrer"'), `${product.sku}: note rendered after the buy button on the page`);
         } else {
           assert.ok(!html.includes('data-buy-note'), `${product.sku}: no note element on the page`);
         }
@@ -202,8 +204,10 @@ async function run() {
     assert.strictEqual(get('VS-BENQ-PD32').buy_note, EXPECTED_NOTES['VS-BENQ-PD32'], 'missing note is backfilled');
     assert.strictEqual(get('VS-LEN-P16G2').buy_note, 'Nota editada por el admin', 'admin note is never overwritten');
     for (const p of products) {
-      if (!['VS-BENQ-PD32', 'VS-LEN-P16G2'].includes(p.sku)) assert.strictEqual(p.buy_note, null, `${p.sku}: null`);
+      if (!EXPECTED_NOTES[p.sku]) assert.strictEqual(p.buy_note, null, `${p.sku}: null`);
     }
+    assert.strictEqual(get('VS-MSI-Z16P').buy_note, EXPECTED_NOTES['VS-MSI-Z16P'], 'MSI note is backfilled');
+    assert.strictEqual(get('VS-ASUS-H7604').buy_note, EXPECTED_NOTES['VS-ASUS-H7604'], 'ASUS note is backfilled');
     const onDisk = JSON.parse(fs.readFileSync(path.join(tmp, 'data', 'db.json'), 'utf8'));
     assert.strictEqual(onDisk.products.find((p: any) => p.sku === 'VS-BENQ-PD32').buy_note, EXPECTED_NOTES['VS-BENQ-PD32']);
     assert.deepStrictEqual(await db.getProducts(), products, 'backfill is idempotent');
@@ -225,7 +229,7 @@ async function run() {
         assert.ok('buy_note' in p, `${p.sku}: buy_note key present in the listing`);
         if (p.sku === 'VS-BENQ-PD32') assert.strictEqual(p.buy_note, EXPECTED_NOTES['VS-BENQ-PD32']);
         else if (p.sku === 'VS-LEN-P16G2') assert.strictEqual(p.buy_note, 'Nota editada por el admin');
-        else assert.strictEqual(p.buy_note, null);
+        else assert.strictEqual(p.buy_note, EXPECTED_NOTES[p.sku] ?? null);
       }
     }
     const benq = get('VS-BENQ-PD32');

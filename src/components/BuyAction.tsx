@@ -5,24 +5,14 @@ import { NO_BUY_LINK_TEXT } from '@/lib/store-copy';
 import { BuyLink } from './BuyLink';
 
 export interface BuyActionProps {
-  product: Pick<Product, 'sku' | 'buy_url' | 'buy_store'> & Partial<Pick<Product, 'buy_note'>>;
+  product: Pick<Product, 'sku' | 'buy_url'> & Partial<Pick<Product, 'buy_note'>>;
   compact?: boolean;
-}
-
-function storeLabel(product: BuyActionProps['product'], url: string): string {
-  const store = product.buy_store?.trim();
-  if (store) return store;
-  try {
-    return new URL(url).hostname.replace(/^www\./, '');
-  } catch {
-    return url;
-  }
 }
 
 /**
  * The only purchase affordance of the store: an outbound link when the product has a valid
- * https `buy_url`, otherwise a neutral text (no button, no cart). The URL is re-validated here so
- * a bad stored value can never become an href. An optional `buy_note` is shown right below the
+ * https `buy_url`, otherwise a neutral text (no button, no cart). The store label (`buy_store`)
+ * is internal and never rendered. The URL is re-validated here so a bad stored value can never become an href. An optional `buy_note` is shown right below the
  * button as escaped plain text (React escapes it; it is never injected as HTML), and only when the
  * product has a valid link.
  */
@@ -38,12 +28,7 @@ export function BuyAction({ product, compact = false }: BuyActionProps) {
 
   return (
     <div className={compact ? 'flex flex-col items-end' : 'flex flex-col items-start'}>
-      <BuyLink
-        sku={product.sku}
-        href={checked.value}
-        store={storeLabel(product, checked.value)}
-        compact={compact}
-      />
+      <BuyLink sku={product.sku} href={checked.value} compact={compact} />
       {note ? (
         <p
           data-buy-note=""

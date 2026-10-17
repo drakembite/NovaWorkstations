@@ -25,9 +25,10 @@ export const initialProducts: Product[] = [
     image_url:
       'https://images.unsplash.com/photo-1593642632823-8f785ba67e45?auto=format&fit=crop&w=800&q=80',
     custom_head_jsonld: null,
-    buy_url: null,
-    buy_store: null,
-    buy_note: null,
+    buy_url: 'https://www.amazon.com/dp/B096D4KY27',
+    buy_store: 'Amazon',
+    buy_note:
+      'Modelo equivalente disponible: MSI Creator Z16 (A11UET), versión anterior de la línea.',
     created_at: '2026-10-16T12:00:00.000Z',
     updated_at: '2026-10-16T12:00:00.000Z',
   },
@@ -55,9 +56,11 @@ export const initialProducts: Product[] = [
     image_url:
       'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=800&q=80',
     custom_head_jsonld: null,
-    buy_url: null,
-    buy_store: null,
-    buy_note: null,
+    buy_url:
+      'https://www.falabella.com.pe/falabella-pe/search?Ntt=asus+proart+studiobook+16+oled',
+    buy_store: 'Falabella Perú',
+    buy_note:
+      'Te lleva a los resultados de búsqueda de modelos ProArt Studiobook 16 OLED disponibles.',
     created_at: '2026-10-16T12:00:00.000Z',
     updated_at: '2026-10-16T12:00:00.000Z',
   },

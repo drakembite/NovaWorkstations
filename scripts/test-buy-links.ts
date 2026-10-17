@@ -10,8 +10,9 @@ import React from 'react';
 import { initialProducts, initialPromotions, initialStoreSettings } from '../src/lib/seed-data';
 import { validateBuyUrl, validateBuyStore, BUY_URL_MAX_LENGTH } from '../src/lib/buy-url';
 
-// The ten products that have a verified store page today. Adding a link later is a data-only
-// change: replace `buy_url: null` / `buy_store: null` in src/lib/seed-data.ts.
+// All twelve seed products have a buy link. Ten point at a verified product page; MSI Z16P (same
+// line, previous generation) and ASUS H7604 (search results page) are approximate and carry a note.
+// Changing a link later is a data-only change in src/lib/seed-data.ts.
 const EXPECTED_LINKS: Record<string, { buy_store: string; buy_url: string }> = {
   'VS-DELL-U27': {
     buy_store: 'Falabella Perú',
@@ -49,6 +50,11 @@ const EXPECTED_LINKS: Record<string, { buy_store: string; buy_url: string }> = {
     buy_store: 'Falabella Perú',
     buy_url:
       'https://www.falabella.com.pe/falabella-pe/product/150403595/lenovo-thinkpad-p16-gen2-16-wuxga-ips-intel-core-i7-13700hx-32gb-ddr5-alto-rendimiento/150403598',
+  },
+  'VS-MSI-Z16P': { buy_store: 'Amazon', buy_url: 'https://www.amazon.com/dp/B096D4KY27' },
+  'VS-ASUS-H7604': {
+    buy_store: 'Falabella Perú',
+    buy_url: 'https://www.falabella.com.pe/falabella-pe/search?Ntt=asus+proart+studiobook+16+oled',
   },
 };
 
@@ -105,7 +111,7 @@ async function run() {
   // ---------------------------------------------------------------------
   // 2. Seed data
   // ---------------------------------------------------------------------
-  console.log('\n--- Test 2: seed carries the ten verified links ---');
+  console.log('\n--- Test 2: seed carries a valid link for every product ---');
   {
     assert.strictEqual(initialProducts.length, 12);
     for (const p of initialProducts) {
@@ -121,9 +127,14 @@ async function run() {
       }
       assert.strictEqual(p.currency, 'USD', 'currency stays USD');
     }
-    assert.strictEqual(Object.keys(EXPECTED_LINKS).length, 10);
-    assert.strictEqual(initialProducts.filter((p) => p.buy_url).length, 10, 'exactly ten seed products are linked');
-    console.log('✅ Ten products linked, two empty, currency untouched.');
+    assert.strictEqual(Object.keys(EXPECTED_LINKS).length, 12);
+    assert.strictEqual(
+      initialProducts.filter((p) => validateBuyUrl(p.buy_url).ok).length,
+      12,
+      'every seed product (12 of 12) has a valid https buy_url'
+    );
+    assert.ok(initialProducts.every((p) => p.stock_quantity > 0), 'every seed product shows stock, so every one needs a button');
+    console.log('✅ 12 of 12 products linked, currency untouched.');
   }
 
   // ---------------------------------------------------------------------
@@ -195,9 +206,10 @@ async function run() {
     assert.strictEqual(reread?.buy_url, 'https://www.amazon.com/dp/EDITED', 'an edit survives the next read (no re-backfill over it)');
     assert.strictEqual(reread?.buy_store, 'Amazon US');
 
-    // Legacy-shaped file where the whole fields are absent and the product is unknown to the seed.
+    // Legacy-shaped file where the whole fields are absent: the two newest links are backfilled too.
     const custom = await db.getProductById(get('VS-MSI-Z16P').id);
-    assert.strictEqual(custom?.buy_url, null);
+    assert.strictEqual(custom?.buy_url, EXPECTED_LINKS['VS-MSI-Z16P'].buy_url);
+    assert.strictEqual(custom?.buy_store, 'Amazon');
     console.log('✅ Legacy rows tolerated; backfill fills only null/empty values and never overwrites.');
 
     // -------------------------------------------------------------------
@@ -208,10 +220,10 @@ async function run() {
       const { formatProduct } = await import('../src/lib/catalog');
       const formatted = formatProduct(get('VS-ANKER-778'), 'https://shop.test');
       assert.strictEqual(formatted.buy_url, EXPECTED_LINKS['VS-ANKER-778'].buy_url);
-      assert.strictEqual(formatted.buy_store, 'Amazon');
+      assert.ok(!('buy_store' in formatted), 'buy_store is an internal label and is not public');
       const empty = formatProduct({ ...get('VS-MSI-Z16P'), buy_url: undefined, buy_store: undefined } as any, 'https://shop.test');
       assert.strictEqual(empty.buy_url, null, 'absent buy_url is exposed as null');
-      assert.strictEqual(empty.buy_store, null, 'absent buy_store is exposed as null');
+      assert.ok(!('buy_store' in empty), 'buy_store stays out of the output even when absent');
 
       const { GET: productsJson } = await import('../src/app/products.json/route');
       const { GET: apiProducts } = await import('../src/app/api/products/route');
@@ -221,22 +233,19 @@ async function run() {
         const res = await handler(new Request('https://shop.test/products.json'));
         const data = await res.json();
         assert.strictEqual(data.products.length, 12);
+        const withoutUrls = JSON.stringify(data).replace(/"buy_url":"[^"]*"/g, '"buy_url":""');
+        assert.ok(!withoutUrls.includes('buy_store'), 'no buy_store key anywhere in the listing');
+        assert.ok(!/falabella|amazon/i.test(withoutUrls), 'no store name anywhere in the listing (URLs aside)');
         for (const p of data.products) {
-          assert.ok('buy_url' in p && 'buy_store' in p, `${p.sku}: fields present in the listing`);
+          assert.ok('buy_url' in p, `${p.sku}: buy_url present in the listing`);
+          assert.ok(!('buy_store' in p), `${p.sku}: buy_store is not public`);
           const expected = EXPECTED_LINKS[p.sku];
           if (p.sku === 'VS-WACOM-C16') {
             assert.strictEqual(p.buy_url, 'https://www.amazon.com/dp/EDITED');
           } else if (p.sku === 'VS-DELL-U27') {
             assert.strictEqual(p.buy_url, 'https://www.dell.com/custom-admin-link');
-          } else if (p.sku === 'VS-HUION-K16') {
-            assert.strictEqual(p.buy_url, expected.buy_url);
-            assert.strictEqual(p.buy_store, 'Mi tienda');
-          } else if (expected) {
-            assert.strictEqual(p.buy_url, expected.buy_url);
-            assert.strictEqual(p.buy_store, expected.buy_store);
           } else {
-            assert.strictEqual(p.buy_url, null);
-            assert.strictEqual(p.buy_store, null);
+            assert.strictEqual(p.buy_url, expected.buy_url);
           }
         }
       }
@@ -247,14 +256,15 @@ async function run() {
       });
       const singleData = await single.json();
       assert.strictEqual(singleData.product.buy_url, EXPECTED_LINKS['VS-ANKER-778'].buy_url);
-      assert.strictEqual(singleData.buy_store, 'Amazon');
+      assert.ok(!('buy_store' in singleData) && !('buy_store' in singleData.product), 'single product JSON hides buy_store');
       const msi = get('VS-MSI-Z16P');
+      await db.updateProduct(msi.id, { buy_url: null, buy_store: null }); // data case: an admin cleared the link
       const noLink = await (
         await productJson(new Request(`https://shop.test/productos/${msi.slug}.json`), { params: Promise.resolve({ slug: msi.slug }) })
       ).json();
       assert.strictEqual(noLink.product.buy_url, null);
-      assert.strictEqual(noLink.buy_store, null);
-      console.log('✅ buy_url and buy_store exposed on all three public JSON surfaces (null when absent).');
+      assert.ok(!('buy_store' in noLink));
+      console.log('✅ buy_url exposed and buy_store hidden on all three public JSON surfaces.');
     }
 
     // -------------------------------------------------------------------
@@ -296,7 +306,7 @@ async function run() {
       assert.strictEqual(goodJson.buy_url, 'https://www.amazon.com/dp/NEWASIN');
       assert.strictEqual(goodJson.buy_store, 'Amazon Perú');
 
-      // A link without a store name would render "Comprar en undefined": the pair must stay coherent.
+      // The internal store label is part of the pair (admins identify the destination by it): keep it coherent.
       const clearStore = await patch({ buy_store: null });
       assert.strictEqual(clearStore.status, 400, 'cannot clear buy_store while a buy_url remains');
 

@@ -288,7 +288,7 @@ export default async function AdminDashboardPage() {
         <div className="border-b border-slate-800 pb-4">
           <h2 className="text-base font-bold text-white">Últimos Clics de Compra</h2>
           <p className="text-xs text-slate-400">
-            Registro propio de clics en «Comprar en…» con la atribución de origen (sin IP ni datos personales).
+            Registro propio de clics en «Comprar» con la atribución de origen (sin IP ni datos personales).
           </p>
         </div>
 

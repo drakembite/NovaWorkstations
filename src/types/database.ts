@@ -18,7 +18,7 @@ export interface Product {
   custom_head_jsonld: Record<string, any> | null;
   /** Absolute https URL of the independent store page where the product can be bought. */
   buy_url: string | null;
-  /** Display name of that store, shown as "Comprar en {buy_store}". */
+  /** Internal label of that store, for administrators only. Never rendered or exposed publicly. */
   buy_store: string | null;
   /** Optional plain-text caveat shown next to the buy button (e.g. an equivalent model). Max 300 chars. */
   buy_note: string | null;
