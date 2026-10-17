@@ -15,6 +15,12 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { DEMO_NOTICE_FOOTER } from '@/lib/store-copy';
+import {
+  DEMO_POLICY_LABEL,
+  NO_MAILBOX_NOTE,
+  POLICY_FOOTER_SHIPPING,
+  STORE_POLICY,
+} from '@/lib/store-policy';
 
 export function Footer() {
   const pathname = usePathname();
@@ -29,6 +35,9 @@ export function Footer() {
       {/* Value Proposition Highlights */}
       <div className="border-b border-slate-800/80 bg-slate-900/40">
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+          <p className="mb-5 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+            {DEMO_POLICY_LABEL}
+          </p>
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
             <div className="flex items-start gap-3.5">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-500/10 text-cyan-400 border border-blue-500/20">
@@ -37,7 +46,7 @@ export function Footer() {
               <div>
                 <h4 className="text-sm font-semibold text-slate-200">Envíos Rápidos</h4>
                 <p className="mt-1 text-xs text-slate-400">
-                  Entrega en 24h en Lima y 48-72h en provincias. Gratis en compras &gt; US$ 150.
+                  {POLICY_FOOTER_SHIPPING}
                 </p>
               </div>
             </div>
@@ -47,7 +56,7 @@ export function Footer() {
                 <RotateCcw className="h-5 w-5" />
               </div>
               <div>
-                <h4 className="text-sm font-semibold text-slate-200">30 Días de Devolución</h4>
+                <h4 className="text-sm font-semibold text-slate-200">{STORE_POLICY.returnDays} Días de Devolución</h4>
                 <p className="mt-1 text-xs text-slate-400">
                   Retorno garantizado sin costos ocultos si el producto no cumple tus expectativas.
                 </p>
@@ -59,7 +68,7 @@ export function Footer() {
                 <ShieldCheck className="h-5 w-5" />
               </div>
               <div>
-                <h4 className="text-sm font-semibold text-slate-200">12 Meses de Garantía</h4>
+                <h4 className="text-sm font-semibold text-slate-200">{STORE_POLICY.warrantyMonths} Meses de Garantía</h4>
                 <p className="mt-1 text-xs text-slate-400">
                   Cobertura directa de fábrica y soporte técnico especializado para workstations.
                 </p>
@@ -108,7 +117,7 @@ export function Footer() {
               </div>
               <div className="flex items-center gap-2">
                 <Mail className="h-4 w-4 text-cyan-400 shrink-0" />
-                <span>contacto@novaworkstations.com</span>
+                <span>{NO_MAILBOX_NOTE}</span>
               </div>
             </div>
           </div>

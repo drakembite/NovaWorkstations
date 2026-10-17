@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { POLICY_BANNER } from '@/lib/store-policy';
 import {
   Menu,
   X,
@@ -42,7 +43,7 @@ export function Navbar() {
         <div className="mx-auto flex max-w-7xl items-center justify-center gap-2">
           <Truck className="h-3.5 w-3.5 shrink-0 animate-pulse text-cyan-200" />
           <span>
-            Envío gratis en compras mayores a US$ 150 | Despacho en 24h en Lima y 48-72h a nivel nacional
+            {POLICY_BANNER}
           </span>
         </div>
       </div>

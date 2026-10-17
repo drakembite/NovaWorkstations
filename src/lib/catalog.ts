@@ -1,4 +1,5 @@
 import { Product } from '@/types/database';
+import { DEMO_POLICY_LABEL, WARRANTY_LABEL } from '@/lib/store-policy';
 
 export function getBaseUrl(request: Request): string {
   const host =
@@ -147,7 +148,7 @@ export const KNOWN_CATEGORIES: Record<string, CategoryInfo> = {
     slug: 'liquidacion',
     name: 'Liquidación',
     description:
-      'Oportunidades outlet y liquidación de inventario con precios rebajados en equipos de alta gama con garantía de 12 meses.',
+      `Oportunidades outlet y liquidación de inventario con precios rebajados en equipos de alta gama con garantía de ${WARRANTY_LABEL} (${DEMO_POLICY_LABEL.toLowerCase()}).`,
     metaTitle: 'Liquidación y Outlet de Hardware',
     metaDescription:
       'Últimas unidades en liquidación y precios reducidos en hardware profesional garantizado.',

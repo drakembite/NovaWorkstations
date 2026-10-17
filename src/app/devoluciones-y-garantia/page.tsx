@@ -3,6 +3,14 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { absoluteUrl, STORE_NAME } from '@/lib/catalog';
 import {
+  DEMO_POLICY_LABEL,
+  DESTINATION_STORE_NOTE,
+  NO_MAILBOX_NOTE,
+  RETURN_WINDOW_LABEL,
+  STORE_POLICY,
+  WARRANTY_LABEL,
+} from '@/lib/store-policy';
+import {
   RotateCcw,
   ShieldCheck,
   CheckCircle2,
@@ -15,8 +23,7 @@ import {
 } from 'lucide-react';
 
 const PAGE_PATH = '/devoluciones-y-garantia';
-const PAGE_DESCRIPTION =
-  '30 días de devolución sin costo y 12 meses de garantía oficial de fábrica en todas las estaciones de trabajo, monitores y componentes profesionales.';
+const PAGE_DESCRIPTION = `${DEMO_POLICY_LABEL}: ${RETURN_WINDOW_LABEL} de devolución sin costo y ${WARRANTY_LABEL} de garantía de fábrica. Esta tienda no vende: la compra se rige por la tienda donde compres.`;
 
 export const metadata: Metadata = {
   // The root layout title template appends the store name.
@@ -41,19 +48,22 @@ export default function DevolucionesGarantiaPage() {
         <div className="mb-10 text-center">
           <div className="inline-flex items-center gap-2 rounded-full border border-indigo-500/30 bg-indigo-950/40 px-3 py-1 text-xs font-semibold text-indigo-400">
             <ShieldCheck className="h-3.5 w-3.5" />
-            <span>Compromiso de Calidad Total</span>
+            <span>{DEMO_POLICY_LABEL}</span>
           </div>
           <h1 className="mt-4 text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
             Devoluciones y Garantía de Fábrica
           </h1>
           <p className="mt-3 text-base text-slate-400 sm:mx-auto sm:max-w-2xl">
-            Tu inversión en hardware profesional está protegida por nuestra política de satisfacción garantizada y soporte técnico certificado.
+            Esta es la política de devoluciones y garantía que declara la tienda de demostración.
+          </p>
+          <p className="mt-4 rounded-xl border border-slate-800 bg-slate-900/50 px-4 py-3 text-xs leading-relaxed text-slate-300 sm:mx-auto sm:max-w-2xl">
+            {DESTINATION_STORE_NOTE} {NO_MAILBOX_NOTE}
           </p>
         </div>
 
         {/* 2 Main Pillar Cards */}
         <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
-          {/* Card 1: 30 Días de Devolución */}
+          {/* Card 1: return window */}
           <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-8 shadow-sm">
             <div className="flex items-center gap-3">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-500/10 text-cyan-400 border border-blue-500/20">
@@ -63,12 +73,12 @@ export default function DevolucionesGarantiaPage() {
                 <span className="text-xs font-bold uppercase tracking-wider text-cyan-400">
                   Satisfacción Garantizada
                 </span>
-                <h2 className="text-xl font-bold text-white">30 Días de Devolución Gratuita</h2>
+                <h2 className="text-xl font-bold text-white">{STORE_POLICY.returnDays} Días de Devolución Gratuita</h2>
               </div>
             </div>
 
             <p className="mt-4 text-sm leading-relaxed text-slate-300">
-              Si por cualquier motivo el equipo no se ajusta a tus requisitos de rendimiento o flujo de trabajo, dispones de <strong className="text-white">30 días calendario</strong> desde la entrega física para solicitar un cambio o el reembolso total de tu dinero.
+              Según la política declarada, si el equipo no se ajusta a tus requisitos de rendimiento o flujo de trabajo, dispones de <strong className="text-white">{RETURN_WINDOW_LABEL} calendario</strong> desde la entrega física para solicitar un cambio o el reembolso total de tu dinero.
             </p>
 
             <div className="mt-6 space-y-3 text-xs text-slate-300">
@@ -82,12 +92,12 @@ export default function DevolucionesGarantiaPage() {
               </div>
               <div className="flex items-start gap-2.5">
                 <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
-                <span><strong className="text-white">Reembolso rápido:</strong> Liquidación en el mismo medio de pago dentro de las 48-72h tras la verificación.</span>
+                <span><strong className="text-white">Reembolso rápido:</strong> Liquidación en el mismo medio de pago dentro de las {STORE_POLICY.refundHours}h tras la verificación.</span>
               </div>
             </div>
           </div>
 
-          {/* Card 2: 12 Meses de Garantía */}
+          {/* Card 2: warranty */}
           <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-8 shadow-sm">
             <div className="flex items-center gap-3">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
@@ -97,12 +107,12 @@ export default function DevolucionesGarantiaPage() {
                 <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">
                   Respaldo de Hardware
                 </span>
-                <h2 className="text-xl font-bold text-white">12 Meses de Garantía de Fábrica</h2>
+                <h2 className="text-xl font-bold text-white">{STORE_POLICY.warrantyMonths} Meses de Garantía de Fábrica</h2>
               </div>
             </div>
 
             <p className="mt-4 text-sm leading-relaxed text-slate-300">
-              Todos los equipos comercializados por NovaWorkstations incluyen un mínimo de <strong className="text-white">12 meses de garantía oficial</strong> contra defectos de fabricación en componentes principales.
+              Según la política declarada, los equipos incluyen un mínimo de <strong className="text-white">{WARRANTY_LABEL} de garantía oficial</strong> contra defectos de fabricación en componentes principales.
             </p>
 
             <div className="mt-6 space-y-3 text-xs text-slate-300">
@@ -112,7 +122,7 @@ export default function DevolucionesGarantiaPage() {
               </div>
               <div className="flex items-start gap-2.5">
                 <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
-                <span><strong className="text-white">Diagnóstico prioritario:</strong> Laboratorio técnico especializado con respuesta en menos de 48 horas.</span>
+                <span><strong className="text-white">Diagnóstico prioritario:</strong> Laboratorio técnico especializado con respuesta en menos de {STORE_POLICY.warrantyDiagnosisHours} horas.</span>
               </div>
               <div className="flex items-start gap-2.5">
                 <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
@@ -128,7 +138,7 @@ export default function DevolucionesGarantiaPage() {
             ¿Cómo Solicitar una Devolución o Servicio de Garantía?
           </h2>
           <p className="mt-2 text-center text-sm text-slate-400">
-            Proceso ágil y transparente diseñado para ingenieros y profesionales sin pérdida de tiempo.
+            Pasos de la política declarada. Al comprar fuera de esta tienda de demostración, se tramitan con la tienda donde compres.
           </p>
 
           <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-4">
@@ -138,7 +148,7 @@ export default function DevolucionesGarantiaPage() {
               </div>
               <h3 className="font-semibold text-white text-sm">Registro de Solicitud</h3>
               <p className="mt-1.5 text-xs text-slate-400">
-                Escribe a soporte@novaworkstations.com con tu número de pedido y descripción del motivo.
+                Contacta a la tienda donde compres (esta tienda de demostración no tiene buzón de atención al cliente) con tu número de compra y la descripción del motivo.
               </p>
             </div>
 
@@ -148,7 +158,7 @@ export default function DevolucionesGarantiaPage() {
               </div>
               <h3 className="font-semibold text-white text-sm">Recojo Programado</h3>
               <p className="mt-1.5 text-xs text-slate-400">
-                Enviamos la guía de retorno y coordinamos el recojo de la unidad en tu dirección.
+                La tienda te envía la guía de retorno y coordina el recojo de la unidad en tu dirección.
               </p>
             </div>
 
@@ -158,7 +168,7 @@ export default function DevolucionesGarantiaPage() {
               </div>
               <h3 className="font-semibold text-white text-sm">Inspección de Taller</h3>
               <p className="mt-1.5 text-xs text-slate-400">
-                Nuestros ingenieros de hardware validan el equipo y confirman la solución en 24-48 horas.
+                Los ingenieros de hardware validan el equipo y confirman la solución en {STORE_POLICY.returnInspectionHours} horas.
               </p>
             </div>
 
@@ -189,9 +199,9 @@ export default function DevolucionesGarantiaPage() {
               </p>
             </div>
             <div>
-              <h4 className="font-semibold text-white">¿Qué ocurre si un componente falla a los 8 meses?</h4>
+              <h4 className="font-semibold text-white">¿Qué ocurre si un componente falla dentro del periodo de garantía?</h4>
               <p className="mt-1 text-slate-400">
-                Está cubierto al 100% por la garantía de 12 meses. Se repara o se sustituye la pieza fallida por una nueva original sin costo de mano de obra ni repuesto.
+                Está cubierto al 100% por la garantía de {WARRANTY_LABEL}. Se repara o se sustituye la pieza fallida por una nueva original sin costo de mano de obra ni repuesto.
               </p>
             </div>
           </div>

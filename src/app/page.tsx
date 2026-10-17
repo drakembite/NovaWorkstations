@@ -17,18 +17,27 @@ import {
 import { getProducts } from '@/lib/db';
 import { ProductCard } from '@/components/ProductCard';
 import { absoluteUrl } from '@/lib/catalog';
+import {
+  DEMO_POLICY_LABEL,
+  LIMA_DELIVERY_SHORT,
+  PROVINCES_DELIVERY_SHORT,
+  POLICY_META_SHIPPING,
+  STORE_POLICY,
+  WARRANTY_LABEL,
+  RETURN_WINDOW_LABEL,
+} from '@/lib/store-policy';
 
 export const metadata: Metadata = {
   // Absolute: the root layout template would append the store name a second time.
   title: { absolute: 'NovaWorkstations | Hardware Profesional para Creadores e Ingenieros' },
   alternates: { canonical: absoluteUrl('/') },
   description:
-    'Estaciones de trabajo de alto rendimiento, monitores de color de precisión calibrados y accesorios profesionales de estudio. Envíos en 24h en Lima y garantía de 12 meses.',
+    `Estaciones de trabajo de alto rendimiento, monitores de color de precisión calibrados y accesorios profesionales de estudio. ${POLICY_META_SHIPPING}`,
   openGraph: {
     url: absoluteUrl('/'),
     title: 'NovaWorkstations | Hardware Profesional',
     description:
-      'Estaciones de trabajo de alto rendimiento, monitores calibrados y accesorios profesionales con despacho en 24h.',
+      `Estaciones de trabajo de alto rendimiento, monitores calibrados y accesorios profesionales. Despacho en ${LIMA_DELIVERY_SHORT} según la ${DEMO_POLICY_LABEL.toLowerCase()}.`,
   },
 };
 
@@ -132,18 +141,19 @@ export default async function HomePage() {
           </div>
 
           {/* Value Pills row */}
-          <div className="mt-12 flex flex-wrap items-center justify-center gap-6 text-xs text-slate-400 font-medium">
+          <p className="mt-12 text-[11px] font-semibold uppercase tracking-wider text-slate-500">{DEMO_POLICY_LABEL}</p>
+          <div className="mt-3 flex flex-wrap items-center justify-center gap-6 text-xs text-slate-400 font-medium">
             <div className="flex items-center gap-2">
               <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-              <span>Despacho en 24h en Lima Metropolitana</span>
+              <span>{`Despacho en ${LIMA_DELIVERY_SHORT} en Lima Metropolitana`}</span>
             </div>
             <div className="flex items-center gap-2">
               <CheckCircle2 className="h-4 w-4 text-cyan-400" />
-              <span>12 Meses de Garantía de Fábrica</span>
+              <span>{`${STORE_POLICY.warrantyMonths} Meses de Garantía de Fábrica`}</span>
             </div>
             <div className="flex items-center gap-2">
               <CheckCircle2 className="h-4 w-4 text-indigo-400" />
-              <span>Factura y Boleta Electrónica</span>
+              <span>Tienda de demostración: no vende ni cobra</span>
             </div>
           </div>
         </div>
@@ -279,9 +289,9 @@ export default async function HomePage() {
               <Truck className="h-6 w-6" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-white">Envío Express 24h</h3>
+              <h3 className="text-base font-bold text-white">{`Envío Express ${LIMA_DELIVERY_SHORT}`}</h3>
               <p className="mt-1 text-xs text-slate-400 leading-relaxed">
-                Despacho prioritario en Lima Metropolitana en 24h y 48-72h a nivel nacional. Embalaje industrial seguro para equipos delicados.
+                {`Despacho prioritario en Lima Metropolitana en ${LIMA_DELIVERY_SHORT} y ${PROVINCES_DELIVERY_SHORT} a nivel nacional. Embalaje industrial seguro para equipos delicados.`}
               </p>
             </div>
           </div>
@@ -291,9 +301,9 @@ export default async function HomePage() {
               <ShieldCheck className="h-6 w-6" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-white">12 Meses Garantía de Fábrica</h3>
+              <h3 className="text-base font-bold text-white">{`${STORE_POLICY.warrantyMonths} Meses Garantía de Fábrica`}</h3>
               <p className="mt-1 text-xs text-slate-400 leading-relaxed">
-                Garantía oficial completa con soporte técnico y piezas originales. 30 días de devolución asegurada sin costo adicional.
+                {`Garantía oficial completa con soporte técnico y piezas originales. ${RETURN_WINDOW_LABEL} de devolución asegurada sin costo adicional.`}
               </p>
             </div>
           </div>

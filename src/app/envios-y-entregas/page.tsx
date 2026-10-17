@@ -3,6 +3,17 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { absoluteUrl, STORE_NAME } from '@/lib/catalog';
 import {
+  DEMO_POLICY_LABEL,
+  DESTINATION_STORE_NOTE,
+  DISPATCH_CUTOFF_LABEL,
+  FREE_SHIPPING_LABEL,
+  LIMA_DELIVERY_SHORT,
+  POLICY_SHIPPING_SUMMARY,
+  PROVINCES_DELIVERY_SHORT,
+  SHIPPING_ZONES,
+  STORE_POLICY,
+} from '@/lib/store-policy';
+import {
   Truck,
   Clock,
   ShieldCheck,
@@ -14,8 +25,7 @@ import {
 } from 'lucide-react';
 
 const PAGE_PATH = '/envios-y-entregas';
-const PAGE_DESCRIPTION =
-  'Conoce nuestras políticas de despacho: entrega en 24h en Lima Metropolitana, 48-72h a nivel nacional, corte a las 16:00 hrs y envío gratis en compras mayores a US$ 150.';
+const PAGE_DESCRIPTION = `${DEMO_POLICY_LABEL}: entrega en ${LIMA_DELIVERY_SHORT} en Lima Metropolitana, ${PROVINCES_DELIVERY_SHORT} a nivel nacional, corte a las ${DISPATCH_CUTOFF_LABEL} y envío gratis en compras mayores a ${FREE_SHIPPING_LABEL}. Esta tienda no vende ni despacha.`;
 
 export const metadata: Metadata = {
   // The root layout title template appends the store name.
@@ -40,13 +50,16 @@ export default function EnviosPage() {
         <div className="mb-10 text-center">
           <div className="inline-flex items-center gap-2 rounded-full border border-cyan-500/30 bg-cyan-950/40 px-3 py-1 text-xs font-semibold text-cyan-400">
             <Truck className="h-3.5 w-3.5" />
-            <span>Logística y Despacho Especializado</span>
+            <span>{DEMO_POLICY_LABEL}</span>
           </div>
           <h1 className="mt-4 text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
             Envíos y Tiempos de Entrega
           </h1>
           <p className="mt-3 text-base text-slate-400 sm:mx-auto sm:max-w-2xl">
-            Entregamos hardware de grado profesional con embalaje reforzado y trazabilidad en tiempo real en todo el Perú.
+            Estos son los plazos y tarifas de envío que declara la tienda de demostración para el Perú. {POLICY_SHIPPING_SUMMARY}
+          </p>
+          <p className="mt-4 rounded-xl border border-slate-800 bg-slate-900/50 px-4 py-3 text-xs leading-relaxed text-slate-300 sm:mx-auto sm:max-w-2xl">
+            {DESTINATION_STORE_NOTE}
           </p>
         </div>
 
@@ -57,9 +70,9 @@ export default function EnviosPage() {
               <Clock className="h-6 w-6" />
             </div>
             <h3 className="text-base font-semibold text-white">Hora de Corte</h3>
-            <p className="mt-2 text-2xl font-bold text-cyan-400">16:00 hrs</p>
+            <p className="mt-2 text-2xl font-bold text-cyan-400">{DISPATCH_CUTOFF_LABEL}</p>
             <p className="mt-2 text-xs leading-relaxed text-slate-400">
-              Pedidos recibidos antes de las 4:00 PM ingresan a la ruta de preparación y salida del mismo día hábil.
+              Las compras confirmadas antes de las {DISPATCH_CUTOFF_LABEL} salen el mismo día hábil.
             </p>
           </div>
 
@@ -68,9 +81,9 @@ export default function EnviosPage() {
               <Truck className="h-6 w-6" />
             </div>
             <h3 className="text-base font-semibold text-white">Lima Metropolitana</h3>
-            <p className="mt-2 text-2xl font-bold text-indigo-400">24 horas</p>
+            <p className="mt-2 text-2xl font-bold text-indigo-400">{STORE_POLICY.limaDeliveryHours} horas</p>
             <p className="mt-2 text-xs leading-relaxed text-slate-400">
-              Despacho con flota propia especializada y manipuladores capacitados en transporte de equipo sensible.
+              Entrega con manipuladores capacitados en transporte de equipo sensible.
             </p>
           </div>
 
@@ -79,9 +92,9 @@ export default function EnviosPage() {
               <MapPin className="h-6 w-6" />
             </div>
             <h3 className="text-base font-semibold text-white">Provincias</h3>
-            <p className="mt-2 text-2xl font-bold text-purple-400">48 - 72 hrs</p>
+            <p className="mt-2 text-2xl font-bold text-purple-400">{STORE_POLICY.provincesDeliveryHours.replace('-', ' - ')} hrs</p>
             <p className="mt-2 text-xs leading-relaxed text-slate-400">
-              Cobertura a nivel nacional con couriers certificados de alto valor y guía de remisión electrónica rastreable.
+              Cobertura a nivel nacional con couriers certificados de alto valor y seguimiento del envío.
             </p>
           </div>
 
@@ -90,9 +103,9 @@ export default function EnviosPage() {
               <PackageCheck className="h-6 w-6" />
             </div>
             <h3 className="text-base font-semibold text-white">Envío Gratuito</h3>
-            <p className="mt-2 text-2xl font-bold text-emerald-400">&gt; US$ 150</p>
+            <p className="mt-2 text-2xl font-bold text-emerald-400">&gt; {FREE_SHIPPING_LABEL}</p>
             <p className="mt-2 text-xs leading-relaxed text-slate-400">
-              Envío 100% bonificado en todas las compras superiores a ciento cincuenta dólares americanos.
+              Envío 100% bonificado en todas las compras superiores a {FREE_SHIPPING_LABEL} (dólares americanos).
             </p>
           </div>
         </div>
@@ -102,7 +115,7 @@ export default function EnviosPage() {
           <div className="border-b border-slate-800 px-6 py-4">
             <h2 className="text-lg font-bold text-white">Tarifas y Tiempos por Destino</h2>
             <p className="text-xs text-slate-400 mt-1">
-              Todos los envíos incluyen seguro contra pérdida o daños durante el transporte.
+              Según la política declarada, todos los envíos incluyen seguro contra pérdida o daños durante el transporte.
             </p>
           </div>
           <div className="overflow-x-auto">
@@ -111,35 +124,19 @@ export default function EnviosPage() {
                 <tr>
                   <th className="px-6 py-3.5">Zona de Destino</th>
                   <th className="px-6 py-3.5">Plazo Promedio</th>
-                  <th className="px-6 py-3.5">Costo (&lt; US$ 150)</th>
-                  <th className="px-6 py-3.5">Costo (&ge; US$ 150)</th>
+                  <th className="px-6 py-3.5">Costo (&lt; {FREE_SHIPPING_LABEL})</th>
+                  <th className="px-6 py-3.5">Costo (&ge; {FREE_SHIPPING_LABEL})</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/80">
-                <tr className="hover:bg-slate-800/30">
-                  <td className="px-6 py-4 font-medium text-white">Lima Metropolitana y Callao</td>
-                  <td className="px-6 py-4">Hasta 24 horas hábiles</td>
-                  <td className="px-6 py-4">US$ 10.00</td>
-                  <td className="px-6 py-4 font-semibold text-emerald-400">GRATIS</td>
-                </tr>
-                <tr className="hover:bg-slate-800/30">
-                  <td className="px-6 py-4 font-medium text-white">Ciudades Principales de Costa (Trujillo, Chiclayo, Piura, Ica)</td>
-                  <td className="px-6 py-4">48 horas hábiles</td>
-                  <td className="px-6 py-4">US$ 18.00</td>
-                  <td className="px-6 py-4 font-semibold text-emerald-400">GRATIS</td>
-                </tr>
-                <tr className="hover:bg-slate-800/30">
-                  <td className="px-6 py-4 font-medium text-white">Sierra y Sur (Arequipa, Cusco, Huancayo, Puno)</td>
-                  <td className="px-6 py-4">48 a 72 horas hábiles</td>
-                  <td className="px-6 py-4">US$ 18.00</td>
-                  <td className="px-6 py-4 font-semibold text-emerald-400">GRATIS</td>
-                </tr>
-                <tr className="hover:bg-slate-800/30">
-                  <td className="px-6 py-4 font-medium text-white">Selva y Destinos Especiales (Iquitos, Pucallpa, Tarapoto)</td>
-                  <td className="px-6 py-4">72 a 96 horas hábiles</td>
-                  <td className="px-6 py-4">US$ 25.00</td>
-                  <td className="px-6 py-4 font-semibold text-emerald-400">GRATIS</td>
-                </tr>
+                {SHIPPING_ZONES.map((zone) => (
+                  <tr key={zone.zone} className="hover:bg-slate-800/30">
+                    <td className="px-6 py-4 font-medium text-white">{zone.zone}</td>
+                    <td className="px-6 py-4">{zone.leadTime}</td>
+                    <td className="px-6 py-4">{`US$ ${zone.feeBelowThresholdUsd.toFixed(2)}`}</td>
+                    <td className="px-6 py-4 font-semibold text-emerald-400">GRATIS</td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
@@ -152,7 +149,7 @@ export default function EnviosPage() {
             <h2 className="text-xl font-bold text-white">Protocolo de Embalaje Profesional</h2>
           </div>
           <p className="mt-3 text-sm leading-relaxed text-slate-300">
-            Las estaciones de trabajo y monitores de alta precisión requieren un manejo riguroso. Cada paquete despachado por NovaWorkstations cuenta con:
+            Las estaciones de trabajo y monitores de alta precisión requieren un manejo riguroso. Según la política declarada, cada paquete cuenta con:
           </p>
           <ul className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 text-xs text-slate-300">
             <li className="flex items-center gap-2">

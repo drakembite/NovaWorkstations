@@ -23,6 +23,13 @@ import {
   STORE_NAME,
 } from '@/lib/catalog';
 import { BuyAction } from '@/components/BuyAction';
+import {
+  DEMO_POLICY_LABEL,
+  LIMA_DELIVERY_SHORT,
+  PROVINCES_DELIVERY_SHORT,
+  STORE_POLICY,
+  WARRANTY_LABEL,
+} from '@/lib/store-policy';
 import { DEMO_NOTICE_LONG } from '@/lib/store-copy';
 
 type ProductPageProps = {
@@ -184,21 +191,22 @@ export default async function ProductDetailPage(props: ProductPageProps) {
             </div>
           </div>
 
-          {/* Value Highlights under image */}
+          {/* Value Highlights under image (declared policy of the demo store) */}
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">{DEMO_POLICY_LABEL}</p>
           <div className="grid grid-cols-3 gap-3">
             <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-800/80 bg-slate-900/40 p-3 text-center">
               <Truck className="h-5 w-5 text-cyan-400 mb-1" />
-              <span className="text-[11px] font-bold text-white">Despacho 24h</span>
+              <span className="text-[11px] font-bold text-white">{`Despacho ${LIMA_DELIVERY_SHORT}`}</span>
               <span className="text-[10px] text-slate-400">Lima y Callao</span>
             </div>
             <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-800/80 bg-slate-900/40 p-3 text-center">
               <ShieldCheck className="h-5 w-5 text-emerald-400 mb-1" />
-              <span className="text-[11px] font-bold text-white">12 Meses</span>
+              <span className="text-[11px] font-bold text-white">{`${STORE_POLICY.warrantyMonths} Meses`}</span>
               <span className="text-[10px] text-slate-400">Garantía oficial</span>
             </div>
             <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-800/80 bg-slate-900/40 p-3 text-center">
               <RotateCcw className="h-5 w-5 text-indigo-400 mb-1" />
-              <span className="text-[11px] font-bold text-white">30 Días</span>
+              <span className="text-[11px] font-bold text-white">{`${STORE_POLICY.returnDays} Días`}</span>
               <span className="text-[10px] text-slate-400">Devolución fácil</span>
             </div>
           </div>
@@ -310,16 +318,16 @@ export default async function ProductDetailPage(props: ProductPageProps) {
           {/* Delivery & Warranty Assurances */}
           <div className="mt-8 rounded-2xl border border-slate-800/80 bg-slate-900/40 p-4">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              Garantías de Compra en NovaWorkstations
+              {DEMO_POLICY_LABEL}
             </span>
             <ul className="mt-3 space-y-2 text-xs text-slate-300">
               <li className="flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4 shrink-0 text-cyan-400" />
-                <span>Despacho seguro en 24 horas en Lima Metropolitana y 48-72h a todo el Perú.</span>
+                <span>{`Despacho seguro en ${STORE_POLICY.limaDeliveryHours} horas en Lima Metropolitana y ${PROVINCES_DELIVERY_SHORT} a todo el Perú.`}</span>
               </li>
               <li className="flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4 shrink-0 text-cyan-400" />
-                <span>12 meses de garantía de fábrica oficial con soporte técnico local.</span>
+                <span>{`${WARRANTY_LABEL} de garantía de fábrica oficial con soporte técnico local.`}</span>
               </li>
             </ul>
           </div>
