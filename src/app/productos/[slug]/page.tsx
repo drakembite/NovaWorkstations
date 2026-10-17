@@ -22,7 +22,8 @@ import {
   serializeJsonLd,
   STORE_NAME,
 } from '@/lib/catalog';
-import { AddToCartButton } from '@/components/AddToCartButton';
+import { BuyAction } from '@/components/BuyAction';
+import { DEMO_NOTICE_LONG } from '@/lib/store-copy';
 
 type ProductPageProps = {
   params: Promise<{ slug: string }>;
@@ -300,9 +301,10 @@ export default async function ProductDetailPage(props: ProductPageProps) {
             </p>
           </div>
 
-          {/* Interactive AddToCart with quantity selector */}
+          {/* Outbound purchase: this demo store sells nothing, the button leads to a real store */}
           <div className="mt-8 border-t border-slate-800 pt-6">
-            <AddToCartButton product={product} showQuantitySelector={true} />
+            <BuyAction product={product} />
+            <p className="mt-3 text-xs leading-relaxed text-slate-400">{DEMO_NOTICE_LONG}</p>
           </div>
 
           {/* Delivery & Warranty Assurances */}
@@ -318,10 +320,6 @@ export default async function ProductDetailPage(props: ProductPageProps) {
               <li className="flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4 shrink-0 text-cyan-400" />
                 <span>12 meses de garantía de fábrica oficial con soporte técnico local.</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 shrink-0 text-cyan-400" />
-                <span>Emitimos Factura o Boleta de Venta electrónica con RUC para empresas.</span>
               </li>
             </ul>
           </div>

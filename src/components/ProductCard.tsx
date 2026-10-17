@@ -3,7 +3,8 @@ import Link from 'next/link';
 import { Truck, Tag } from 'lucide-react';
 import { Product } from '@/types/database';
 import { normalizeCategorySlug } from '@/lib/catalog';
-import { AddToCartButton } from './AddToCartButton';
+import { DEMO_NOTICE_SHORT } from '@/lib/store-copy';
+import { BuyAction } from './BuyAction';
 
 export interface ProductCardProps {
   product: Product;
@@ -98,7 +99,7 @@ export function ProductCard({ product, className = '' }: ProductCardProps) {
           <span className="truncate">{product.shipping_text}</span>
         </div>
 
-        {/* Price and AddToCart Row */}
+        {/* Price and outbound buy link row */}
         <div className="mt-4 flex items-center justify-between gap-3 border-t border-slate-800/80 pt-3">
           <div className="flex flex-col">
             {hasDiscount && (
@@ -111,10 +112,11 @@ export function ProductCard({ product, className = '' }: ProductCardProps) {
             </span>
           </div>
 
-          <div className="shrink-0">
-            <AddToCartButton product={product} compact={true} />
+          <div className="shrink-0 text-right">
+            <BuyAction product={product} compact={true} />
           </div>
         </div>
+        <p className="mt-2 text-[10px] leading-snug text-slate-500">{DEMO_NOTICE_SHORT}</p>
       </div>
     </article>
   );

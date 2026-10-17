@@ -84,6 +84,29 @@ async function run() {
     console.log('✅ Backfill only fills null/empty values and never overwrites an edit.');
   }
 
+  console.log('\n--- Test 4: outbound_clicks table and insert (first party, minimal) ---');
+  {
+    const create = sqls.find((s) => /CREATE TABLE IF NOT EXISTS outbound_clicks/i.test(s));
+    assert.ok(create, 'outbound_clicks is created additively');
+    for (const col of ['sku', 'target_url', 'attribution_data', 'created_at']) {
+      assert.ok(new RegExp(`\\b${col}\\b`).test(create!), `outbound_clicks has ${col}`);
+    }
+    assert.ok(!/\b(ip|ip_address|user_agent|email)\b/i.test(create!), 'no personal data columns');
+
+    executed.length = 0;
+    const click = await db.createOutboundClick({
+      sku: 'VS-ANKER-778',
+      target_url: 'https://www.amazon.com/dp/X',
+      attribution_data: { utm_source: 'chatgpt.com' },
+    });
+    const insert = executed.find((e) => /INSERT INTO outbound_clicks/i.test(e.sql));
+    assert.ok(insert, 'createOutboundClick inserts into outbound_clicks');
+    assert.ok(insert!.params!.includes('VS-ANKER-778') && insert!.params!.includes('https://www.amazon.com/dp/X'));
+    assert.ok(insert!.params!.includes(JSON.stringify({ utm_source: 'chatgpt.com' })));
+    assert.ok(click.id && click.created_at, 'returns the stored record');
+    console.log('✅ outbound_clicks is additive and stores only sku, target, attribution and time.');
+  }
+
   console.log('\n🎉 ALL BUY LINK POSTGRESQL TESTS PASSED SUCCESSFULLY! 🎉\n');
 }
 

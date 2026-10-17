@@ -14,6 +14,7 @@ import {
   Clock,
   ExternalLink,
 } from 'lucide-react';
+import { DEMO_NOTICE_FOOTER } from '@/lib/store-copy';
 
 export function Footer() {
   const pathname = usePathname();
@@ -242,8 +243,13 @@ export function Footer() {
           </div>
         </div>
 
+        {/* Demo status statement */}
+        <p className="mt-12 rounded-xl border border-slate-800 bg-slate-900/50 px-4 py-3 text-xs leading-relaxed text-slate-400">
+          {DEMO_NOTICE_FOOTER}
+        </p>
+
         {/* Bottom bar */}
-        <div className="mt-12 border-t border-slate-800/80 pt-8 sm:flex sm:items-center sm:justify-between text-xs text-slate-500">
+        <div className="mt-6 border-t border-slate-800/80 pt-8 sm:flex sm:items-center sm:justify-between text-xs text-slate-500">
           <p>© {currentYear} NovaWorkstations S.A.C. Todos los derechos reservados.</p>
           <p className="mt-4 sm:mt-0">
             Diseñado para flujos de trabajo de ingeniería, renderizado 3D e inteligencia artificial.

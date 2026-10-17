@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "tsx scripts/test-db.ts && tsx scripts/test-webhooks.ts && tsx scripts/test-endpoints.ts && tsx scripts/test-layout-info.ts && tsx scripts/test-catalog-ssr.ts && tsx scripts/test-cart-checkout.ts && tsx scripts/test-admin.ts && tsx scripts/test-buy-links.ts && tsx scripts/test-buy-links-pg.ts && tsx scripts/test-auth.ts",
+    "test": "tsx scripts/test-db.ts && tsx scripts/test-webhooks.ts && tsx scripts/test-endpoints.ts && tsx scripts/test-layout-info.ts && tsx scripts/test-catalog-ssr.ts && tsx scripts/test-cart-checkout.ts && tsx scripts/test-admin.ts && tsx scripts/test-buy-links.ts && tsx scripts/test-buy-links-pg.ts && tsx scripts/test-outbound.ts && tsx scripts/test-auth.ts",
     "test:db": "tsx scripts/test-db.ts",
     "test:webhooks": "tsx scripts/test-webhooks.ts",
     "test:endpoints": "tsx scripts/test-endpoints.ts",
@@ -17,7 +17,8 @@
     "test:admin": "tsx scripts/test-admin.ts",
     "test:auth": "tsx scripts/test-auth.ts",
     "test:buylinks": "tsx scripts/test-buy-links.ts",
-    "test:buylinks-pg": "tsx scripts/test-buy-links-pg.ts"
+    "test:buylinks-pg": "tsx scripts/test-buy-links-pg.ts",
+    "test:outbound": "tsx scripts/test-outbound.ts"
   },
   "dependencies": {
     "lucide-react": "^1.16.0",

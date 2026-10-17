@@ -2,7 +2,7 @@
 import React from 'react';
 
 export const STORE_NAME = 'NovaWorkstations';
-export const FALLBACK_SITE_URL = 'https://novaworkstations.com';
+export const FALLBACK_SITE_URL = 'https://planiaula.com';
 
 /** Mimics how Next resolves a page title against the root layout title object. */
 export function resolveTitle(rootTitle: unknown, pageTitle: unknown): string {

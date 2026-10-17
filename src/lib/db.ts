@@ -6,6 +6,7 @@ import {
   Product,
   Promotion,
   Order,
+  OutboundClick,
   StoreSettings,
 } from '@/types/database';
 import {
@@ -19,8 +20,13 @@ interface DatabaseData {
   products: Product[];
   promotions: Promotion[];
   orders: Order[];
+  /** Optional: files written before this collection existed do not have it. */
+  outbound_clicks?: OutboundClick[];
   store_settings: StoreSettings;
 }
+
+// Keeps the JSON fallback bounded: the oldest clicks are dropped beyond this many records.
+const MAX_JSON_OUTBOUND_CLICKS = 5000;
 
 // In serverless environments like Vercel, the project root is read-only.
 // Use /tmp which is writable, or fallback seamlessly to in-memory store.
@@ -33,6 +39,7 @@ let memoryDb: DatabaseData = {
   products: [...initialProducts],
   promotions: [...initialPromotions],
   orders: [],
+  outbound_clicks: [],
   store_settings: { ...initialStoreSettings },
 };
 
@@ -87,6 +94,7 @@ async function readJsonDb(): Promise<DatabaseData> {
         products: [...initialProducts],
         promotions: [...initialPromotions],
         orders: [],
+        outbound_clicks: [],
         store_settings: { ...initialStoreSettings },
       };
       try {
@@ -115,6 +123,10 @@ async function readJsonDb(): Promise<DatabaseData> {
     }
     if (!Array.isArray(data.orders)) {
       data.orders = [];
+      modified = true;
+    }
+    if (!Array.isArray(data.outbound_clicks)) {
+      data.outbound_clicks = [];
       modified = true;
     }
     if (!data.store_settings) {
@@ -267,6 +279,14 @@ async function checkAndInitPostgres(): Promise<boolean> {
               attribution_data JSONB NOT NULL DEFAULT '{}'::jsonb,
               created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
               refunded_at TIMESTAMPTZ NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS outbound_clicks (
+              id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+              sku VARCHAR(64) NOT NULL,
+              target_url TEXT NOT NULL,
+              attribution_data JSONB NOT NULL DEFAULT '{}'::jsonb,
+              created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
             );
 
             CREATE TABLE IF NOT EXISTS store_settings (
@@ -457,6 +477,17 @@ function mapOrderRow(row: any): Order {
     attribution_data: typeof row.attribution_data === 'string' ? JSON.parse(row.attribution_data) : (row.attribution_data || {}),
     created_at: new Date(row.created_at).toISOString(),
     refunded_at: row.refunded_at ? new Date(row.refunded_at).toISOString() : null,
+  };
+}
+
+function mapOutboundClickRow(row: any): OutboundClick {
+  return {
+    id: row.id,
+    sku: row.sku,
+    target_url: row.target_url,
+    attribution_data:
+      typeof row.attribution_data === 'string' ? JSON.parse(row.attribution_data) : (row.attribution_data || {}),
+    created_at: new Date(row.created_at).toISOString(),
   };
 }
 
@@ -853,6 +884,63 @@ export async function refundOrder(
   }
 
   return refundedOrder;
+}
+
+export async function getOutboundClicks(): Promise<OutboundClick[]> {
+  const usePg = await checkAndInitPostgres();
+  if (usePg && pgPool) {
+    try {
+      const res = await pgPool.query('SELECT * FROM outbound_clicks ORDER BY created_at ASC');
+      return res.rows.map(mapOutboundClickRow);
+    } catch (err: any) {
+      console.warn('[DB] PostgreSQL error in getOutboundClicks, falling back to JSON:', err.message);
+    }
+  }
+
+  const data = await readJsonDb();
+  return [...(data.outbound_clicks ?? [])];
+}
+
+/** Stores one outbound click. Callers pass only the sku, the DB target and sanitised attribution. */
+export async function createOutboundClick(
+  click: Pick<OutboundClick, 'sku' | 'target_url' | 'attribution_data'>
+): Promise<OutboundClick> {
+  const id = crypto.randomUUID();
+  const created_at = new Date().toISOString();
+  const attribution_data = click.attribution_data || {};
+
+  const usePg = await checkAndInitPostgres();
+  if (usePg && pgPool) {
+    try {
+      const res = await pgPool.query(
+        `INSERT INTO outbound_clicks (id, sku, target_url, attribution_data, created_at)
+         VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+        [id, click.sku, click.target_url, JSON.stringify(attribution_data), created_at]
+      );
+      if (res.rows.length > 0) {
+        return mapOutboundClickRow(res.rows[0]);
+      }
+      return { id, sku: click.sku, target_url: click.target_url, attribution_data, created_at };
+    } catch (err: any) {
+      console.warn('[DB] PostgreSQL error in createOutboundClick, falling back to JSON:', err.message);
+    }
+  }
+
+  return mutateJsonDb((data) => {
+    const record: OutboundClick = {
+      id,
+      sku: click.sku,
+      target_url: click.target_url,
+      attribution_data,
+      created_at,
+    };
+    const list = data.outbound_clicks ?? (data.outbound_clicks = []);
+    list.push(record);
+    if (list.length > MAX_JSON_OUTBOUND_CLICKS) {
+      list.splice(0, list.length - MAX_JSON_OUTBOUND_CLICKS);
+    }
+    return { ...record };
+  });
 }
 
 export async function getStoreSettings(): Promise<StoreSettings> {

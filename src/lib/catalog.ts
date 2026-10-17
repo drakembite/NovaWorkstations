@@ -24,18 +24,21 @@ export function getBaseUrl(request: Request): string {
     }
   }
 
-  return 'https://novaworkstations.com';
+  return getSiteUrl();
 }
 
 export const STORE_NAME = 'NovaWorkstations';
 
+/** Deployed domain, used when NEXT_PUBLIC_SITE_URL is not set. */
+export const DEFAULT_SITE_URL = 'https://planiaula.com';
+
 /**
  * Public site origin used for canonical URLs and structured data.
- * Read lazily from NEXT_PUBLIC_SITE_URL (no trailing slash), with a safe fallback.
+ * Read lazily from NEXT_PUBLIC_SITE_URL (no trailing slash), falling back to the deployed domain.
  */
 export function getSiteUrl(): string {
   const configured = (process.env.NEXT_PUBLIC_SITE_URL || '').trim().replace(/\/+$/, '');
-  return configured || 'https://novaworkstations.com';
+  return configured || DEFAULT_SITE_URL;
 }
 
 /** Absolute URL for a site path such as `/productos/x` (or `/` for the home page). */

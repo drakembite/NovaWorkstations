@@ -24,6 +24,20 @@ export interface Product {
   updated_at: string;
 }
 
+/**
+ * First-party record of a click on a product's outbound buy link. Deliberately minimal:
+ * no IP address, user agent or any other personal data.
+ */
+export interface OutboundClick {
+  id: string;
+  sku: string;
+  /** Always the product's stored buy_url at click time, never a client supplied value. */
+  target_url: string;
+  /** Whitelisted fields of the inbound first-party attribution cookie. */
+  attribution_data: Record<string, string>;
+  created_at: string;
+}
+
 export type DiscountType = 'percentage' | 'fixed';
 
 export interface Promotion {
