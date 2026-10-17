@@ -184,7 +184,13 @@ async function run() {
     console.log('\n--- Test 3: click handler beacon ---');
     {
       const sku = linked[0].sku;
-      const el = BuyLink({ sku, href: linked[0].buy_url! }) as React.ReactElement<any>;
+      // BuyLink keeps a pending flag, so it must be called inside a render to get its real handler.
+      let el!: React.ReactElement<any>;
+      const Probe = () => {
+        el = BuyLink({ sku, href: linked[0].buy_url! }) as React.ReactElement<any>;
+        return el;
+      };
+      renderToStaticMarkup(React.createElement(Probe));
       assert.strictEqual(el.type, 'a', 'BuyLink renders a plain anchor');
       assert.strictEqual(typeof el.props.onClick, 'function');
       const clickEvent = { preventDefault() { throw new Error('click must not be prevented'); } };
