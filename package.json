@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "tsx scripts/test-db.ts && tsx scripts/test-webhooks.ts && tsx scripts/test-endpoints.ts && tsx scripts/test-layout-info.ts && tsx scripts/test-catalog-ssr.ts && tsx scripts/test-admin.ts && tsx scripts/test-buy-links.ts && tsx scripts/test-buy-links-pg.ts && tsx scripts/test-buy-note.ts && tsx scripts/test-outbound.ts && tsx scripts/test-no-cart.ts && tsx scripts/test-demo-copy.ts && tsx scripts/test-auth.ts && tsx scripts/test-loading.ts && tsx scripts/test-demo-coupons.ts && tsx scripts/test-demo-coupons-pg.ts",
+    "test": "tsx scripts/test-db.ts && tsx scripts/test-webhooks.ts && tsx scripts/test-endpoints.ts && tsx scripts/test-layout-info.ts && tsx scripts/test-catalog-ssr.ts && tsx scripts/test-admin.ts && tsx scripts/test-buy-links.ts && tsx scripts/test-buy-links-pg.ts && tsx scripts/test-buy-note.ts && tsx scripts/test-outbound.ts && tsx scripts/test-no-cart.ts && tsx scripts/test-demo-copy.ts && tsx scripts/test-auth.ts && tsx scripts/test-loading.ts && tsx scripts/test-demo-coupons.ts && tsx scripts/test-demo-coupons-pg.ts && tsx scripts/test-demo-coupons-pg-failure.ts",
     "test:db": "tsx scripts/test-db.ts",
     "test:webhooks": "tsx scripts/test-webhooks.ts",
     "test:endpoints": "tsx scripts/test-endpoints.ts",
@@ -23,7 +23,8 @@
     "test:nocart": "tsx scripts/test-no-cart.ts",
     "test:loading": "tsx scripts/test-loading.ts",
     "test:democoupons": "tsx scripts/test-demo-coupons.ts",
-    "test:democoupons-pg": "tsx scripts/test-demo-coupons-pg.ts"
+    "test:democoupons-pg": "tsx scripts/test-demo-coupons-pg.ts",
+    "test:democoupons-pg-failure": "tsx scripts/test-demo-coupons-pg-failure.ts"
   },
   "dependencies": {
     "lucide-react": "^1.16.0",

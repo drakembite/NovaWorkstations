@@ -452,16 +452,22 @@ async function checkAndInitPostgres(): Promise<boolean> {
           // Non-destructive rename of the legacy demo coupon codes: matched by the OLD code only, skipped
           // when any row already has the NEW code, and the description is replaced only while it still is
           // the exact old seed text. Idempotent: after the first run nothing matches.
+          // Cosmetic, so each failure is logged and skipped: it must never reach the init-level catch,
+          // which would silently move the whole store to the local JSON fallback.
           for (const rename of LEGACY_DEMO_COUPON_RENAMES) {
-            await client.query(
-              `UPDATE promotions AS legacy SET
-                 code = $1,
-                 description = CASE WHEN legacy.description = $3 THEN $4 ELSE legacy.description END
-               WHERE UPPER(legacy.code) = $2
-                 AND NOT EXISTS (SELECT 1 FROM promotions AS existing WHERE UPPER(existing.code) = $5)`,
-              // $5 repeats $1 on purpose: one parameter cannot be both a varchar assignment and a text comparison.
-              [rename.to, rename.from, rename.oldDescription, rename.newDescription, rename.to]
-            );
+            try {
+              await client.query(
+                `UPDATE promotions AS legacy SET
+                   code = $1,
+                   description = CASE WHEN legacy.description = $3 THEN $4 ELSE legacy.description END
+                 WHERE UPPER(legacy.code) = $2
+                   AND NOT EXISTS (SELECT 1 FROM promotions AS existing WHERE UPPER(existing.code) = $5)`,
+                // $5 repeats $1 on purpose: one parameter cannot be both a varchar assignment and a text comparison.
+                [rename.to, rename.from, rename.oldDescription, rename.newDescription, rename.to]
+              );
+            } catch (err: any) {
+              console.warn('[DB] legacy demo coupon rename skipped:', err.message);
+            }
           }
 
           const settingsCountRes = await client.query('SELECT COUNT(*) FROM store_settings');
