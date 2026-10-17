@@ -1,6 +1,7 @@
 import assert from 'assert';
 import { POST as validateCoupon } from '../src/app/api/promotions/validate/route';
 import { POST as createOrderApi, GET as getOrdersApi } from '../src/app/api/orders/route';
+import { ADMIN_COOKIE_NAME, ADMIN_USERNAME, createSessionToken } from '../src/lib/auth';
 import { getOrderById, getPromotionByCode } from '../src/lib/db';
 import { getCartFromCookies } from '../src/lib/cart';
 
@@ -266,7 +267,12 @@ async function runCartCheckoutTests() {
 
   // 2.5 GET /api/orders endpoint returns orders
   {
-    const res = await getOrdersApi();
+    const token = await createSessionToken(ADMIN_USERNAME);
+    const res = await getOrdersApi(
+      new Request('http://localhost:3000/api/orders', {
+        headers: { cookie: `${ADMIN_COOKIE_NAME}=${token}` },
+      })
+    );
     assert.strictEqual(res.status, 200);
     const data = await res.json();
     assert.strictEqual(data.success, true);

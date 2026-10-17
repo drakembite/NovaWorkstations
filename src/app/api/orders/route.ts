@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createOrder, getOrders, getPromotionByCode } from '@/lib/db';
 import { getAttributionFromCookies } from '@/lib/attribution';
+import { isAdminRequest } from '@/lib/auth';
 import { OrderItem } from '@/types/database';
 
 interface OrderRequestBody {
@@ -13,7 +14,15 @@ interface OrderRequestBody {
   attribution_data?: Record<string, any>;
 }
 
-export async function GET() {
+export async function GET(req: NextRequest | Request) {
+  // Orders hold customer PII: only an admin session may read them.
+  if (!(await isAdminRequest(req))) {
+    return NextResponse.json(
+      { success: false, error: 'No autorizado. Se requiere sesión de administrador.' },
+      { status: 401 }
+    );
+  }
+
   try {
     const orders = await getOrders();
     return NextResponse.json({ success: true, orders }, { status: 200 });
