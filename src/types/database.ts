@@ -16,6 +16,10 @@ export interface Product {
   shipping_text: string;
   image_url: string;
   custom_head_jsonld: Record<string, any> | null;
+  /** Absolute https URL of the independent store page where the product can be bought. */
+  buy_url: string | null;
+  /** Display name of that store, shown as "Comprar en {buy_store}". */
+  buy_store: string | null;
   created_at: string;
   updated_at: string;
 }

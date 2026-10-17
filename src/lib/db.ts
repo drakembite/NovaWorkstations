@@ -37,6 +37,40 @@ let memoryDb: DatabaseData = {
 };
 
 let writeLock: Promise<void> = Promise.resolve();
+let buyLinksBackfilled = false;
+
+function isBlank(value: unknown): boolean {
+  return value === undefined || value === null || (typeof value === 'string' && value.trim() === '');
+}
+
+/**
+ * Non-destructive backfill of the outbound buy link from the seed, matched by SKU.
+ * Fills `buy_url` / `buy_store` only where the stored value is missing, null or empty, so an
+ * admin edit is never overwritten. Legacy rows without the fields are normalised to null.
+ * Returns true when anything changed (the caller persists the file).
+ */
+function backfillBuyLinks(products: Product[]): boolean {
+  let changed = false;
+  const seedBySku = new Map(initialProducts.map((p) => [p.sku, p]));
+  for (const product of products) {
+    const seed = seedBySku.get(product.sku);
+    if (isBlank(product.buy_url)) {
+      const next = seed?.buy_url ?? null;
+      if (product.buy_url !== next) {
+        product.buy_url = next;
+        changed = true;
+      }
+    }
+    if (isBlank(product.buy_store)) {
+      const next = seed?.buy_store ?? null;
+      if (product.buy_store !== next) {
+        product.buy_store = next;
+        changed = true;
+      }
+    }
+  }
+  return changed;
+}
 
 async function readJsonDb(): Promise<DatabaseData> {
   try {
@@ -86,6 +120,14 @@ async function readJsonDb(): Promise<DatabaseData> {
     if (!data.store_settings) {
       data.store_settings = { ...initialStoreSettings };
       modified = true;
+    }
+    // Once per process (the JSON equivalent of the Postgres init): later reads must not undo
+    // an admin edit that cleared a link.
+    if (!buyLinksBackfilled) {
+      buyLinksBackfilled = true;
+      if (backfillBuyLinks(data.products)) {
+        modified = true;
+      }
     }
 
     if (modified) {
@@ -189,6 +231,9 @@ async function checkAndInitPostgres(): Promise<boolean> {
               updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
             );
 
+            ALTER TABLE products ADD COLUMN IF NOT EXISTS buy_url TEXT NULL;
+            ALTER TABLE products ADD COLUMN IF NOT EXISTS buy_store VARCHAR(120) NULL;
+
             CREATE TABLE IF NOT EXISTS promotions (
               id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
               code VARCHAR(50) NOT NULL UNIQUE,
@@ -244,8 +289,8 @@ async function checkAndInitPostgres(): Promise<boolean> {
                   id, sku, slug, title, brand, mpn, barcode_ean, category,
                   price, compare_at_price, currency, stock_quantity,
                   short_description, specs_json, shipping_text, image_url,
-                  custom_head_jsonld, created_at, updated_at
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)`,
+                  custom_head_jsonld, buy_url, buy_store, created_at, updated_at
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)`,
                 [
                   prod.id,
                   prod.sku,
@@ -264,11 +309,26 @@ async function checkAndInitPostgres(): Promise<boolean> {
                   prod.shipping_text,
                   prod.image_url,
                   prod.custom_head_jsonld ? JSON.stringify(prod.custom_head_jsonld) : null,
+                  prod.buy_url,
+                  prod.buy_store,
                   prod.created_at,
                   prod.updated_at,
                 ]
               );
             }
+          }
+
+          // Non-destructive backfill: fill the buy link from the seed only where the stored
+          // value is null or empty, so an admin edit is never overwritten. updated_at is untouched.
+          for (const prod of initialProducts) {
+            if (!prod.buy_url) continue;
+            await client.query(
+              `UPDATE products SET
+                 buy_url = COALESCE(NULLIF(buy_url, ''), $1),
+                 buy_store = COALESCE(NULLIF(buy_store, ''), $2)
+               WHERE sku = $3`,
+              [prod.buy_url, prod.buy_store, prod.sku]
+            );
           }
 
           const promoCountRes = await client.query('SELECT COUNT(*) FROM promotions');
@@ -354,6 +414,8 @@ function mapProductRow(row: any): Product {
     custom_head_jsonld: row.custom_head_jsonld
       ? (typeof row.custom_head_jsonld === 'string' ? JSON.parse(row.custom_head_jsonld) : row.custom_head_jsonld)
       : null,
+    buy_url: row.buy_url ?? null,
+    buy_store: row.buy_store ?? null,
     created_at: new Date(row.created_at).toISOString(),
     updated_at: new Date(row.updated_at).toISOString(),
   };
