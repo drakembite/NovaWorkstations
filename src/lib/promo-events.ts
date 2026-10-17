@@ -39,7 +39,7 @@ export const COMMERCIAL_EVENTS: readonly CommercialEvent[] = [
   {
     quarter: 'Q4 - Noviembre',
     title: 'Black Friday & Cyber Monday Pro',
-    description: 'Nuestra mayor campaña del año con 15% OFF en workstations de gama alta con código BLACKFRIDAY15.',
+    description: 'Nuestra mayor campaña del año con 15% OFF en workstations de gama alta con código DEMO-BLACKFRIDAY15.',
     starts_at: '2026-11-01T00:00:00-05:00',
     ends_at: '2026-11-30T23:59:59-05:00',
     highlight: true,

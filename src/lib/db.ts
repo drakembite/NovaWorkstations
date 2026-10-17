@@ -46,6 +46,7 @@ let memoryDb: DatabaseData = {
 
 let writeLock: Promise<void> = Promise.resolve();
 let buyLinksBackfilled = false;
+let demoCouponsMigrated = false;
 
 function isBlank(value: unknown): boolean {
   return value === undefined || value === null || (typeof value === 'string' && value.trim() === '');
@@ -83,6 +84,55 @@ function backfillBuyLinks(products: Product[]): boolean {
         changed = true;
       }
     }
+  }
+  return changed;
+}
+
+/**
+ * The two demo coupons were renamed with the `DEMO-` prefix. Stores keep their rows and the seed only
+ * applies to empty stores, so existing data is migrated by this additive rename instead.
+ * `description` is the text those rows carried before; it is replaced only while a row still has exactly
+ * that text, so an admin edit is never overwritten.
+ */
+export const LEGACY_DEMO_COUPON_RENAMES: ReadonlyArray<{
+  from: string;
+  to: string;
+  oldDescription: string;
+  newDescription: string;
+}> = [
+  {
+    from: 'ESTUDIO10',
+    to: 'DEMO-ESTUDIO10',
+    oldDescription:
+      '10% de descuento directo en estaciones de trabajo y monitores aplicando el código en el carrito.',
+    newDescription: initialPromotions.find((p) => p.code === 'DEMO-ESTUDIO10')?.description ?? '',
+  },
+  {
+    from: 'BLACKFRIDAY15',
+    to: 'DEMO-BLACKFRIDAY15',
+    oldDescription: '15% de descuento en equipos seleccionados del 20 al 30 de noviembre.',
+    newDescription: initialPromotions.find((p) => p.code === 'DEMO-BLACKFRIDAY15')?.description ?? '',
+  },
+];
+
+/**
+ * Idempotent, non-destructive rename of the legacy demo coupon codes (JSON fallback).
+ * A row is renamed only when its code is the OLD code (case-insensitive) and no row has the NEW code;
+ * no other field is matched or changed, except the description while it is still the exact old seed text.
+ * Returns true when anything changed (the caller persists the file).
+ */
+export function renameLegacyDemoCoupons(promotions: Promotion[]): boolean {
+  let changed = false;
+  for (const rename of LEGACY_DEMO_COUPON_RENAMES) {
+    const newExists = promotions.some((p) => p.code.toUpperCase() === rename.to);
+    if (newExists) continue;
+    const legacy = promotions.find((p) => p.code.toUpperCase() === rename.from);
+    if (!legacy) continue;
+    legacy.code = rename.to;
+    if (legacy.description === rename.oldDescription) {
+      legacy.description = rename.newDescription;
+    }
+    changed = true;
   }
   return changed;
 }
@@ -146,6 +196,15 @@ async function readJsonDb(): Promise<DatabaseData> {
     if (!buyLinksBackfilled) {
       buyLinksBackfilled = true;
       if (backfillBuyLinks(data.products)) {
+        modified = true;
+      }
+    }
+
+    // Once per process, like the buy link backfill: an admin who later creates a promotion with a
+    // retired code must not have it renamed on every read.
+    if (!demoCouponsMigrated) {
+      demoCouponsMigrated = true;
+      if (renameLegacyDemoCoupons(data.promotions)) {
         modified = true;
       }
     }
@@ -388,6 +447,21 @@ async function checkAndInitPostgres(): Promise<boolean> {
                 ]
               );
             }
+          }
+
+          // Non-destructive rename of the legacy demo coupon codes: matched by the OLD code only, skipped
+          // when any row already has the NEW code, and the description is replaced only while it still is
+          // the exact old seed text. Idempotent: after the first run nothing matches.
+          for (const rename of LEGACY_DEMO_COUPON_RENAMES) {
+            await client.query(
+              `UPDATE promotions AS legacy SET
+                 code = $1,
+                 description = CASE WHEN legacy.description = $3 THEN $4 ELSE legacy.description END
+               WHERE UPPER(legacy.code) = $2
+                 AND NOT EXISTS (SELECT 1 FROM promotions AS existing WHERE UPPER(existing.code) = $5)`,
+              // $5 repeats $1 on purpose: one parameter cannot be both a varchar assignment and a text comparison.
+              [rename.to, rename.from, rename.oldDescription, rename.newDescription, rename.to]
+            );
           }
 
           const settingsCountRes = await client.query('SELECT COUNT(*) FROM store_settings');

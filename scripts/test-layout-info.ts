@@ -188,8 +188,8 @@ async function testLayoutAndInfo() {
     assert.ok(promotions.length >= 2, 'Must have at least 2 seed promotions');
 
     const promoCodes = promotions.map((p) => p.code);
-    assert.ok(promoCodes.includes('ESTUDIO10'), 'ESTUDIO10 coupon must exist');
-    assert.ok(promoCodes.includes('BLACKFRIDAY15'), 'BLACKFRIDAY15 coupon must exist');
+    assert.ok(promoCodes.includes('DEMO-ESTUDIO10'), 'DEMO-ESTUDIO10 coupon must exist');
+    assert.ok(promoCodes.includes('DEMO-BLACKFRIDAY15'), 'DEMO-BLACKFRIDAY15 coupon must exist');
 
     const pageElement = await PromocionesPage();
     assert.ok(pageElement, 'PromocionesPage must render successfully');

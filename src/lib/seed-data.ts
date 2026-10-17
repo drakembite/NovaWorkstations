@@ -369,10 +369,10 @@ export const initialProducts: Product[] = [
 export const initialPromotions: Promotion[] = [
   {
     id: 'b0000000-0000-4000-8000-000000000001',
-    code: 'ESTUDIO10',
+    code: 'DEMO-ESTUDIO10',
     name: 'Descuento Especial Creativos y Arquitectos',
     description:
-      '10% de descuento directo en estaciones de trabajo y monitores aplicando el código en el carrito.',
+      '10% de descuento en estaciones de trabajo y monitores con el código DEMO-ESTUDIO10. Cupón de demostración: no es canjeable en ninguna tienda real.',
     discount_type: 'percentage',
     discount_value: 10.0,
     min_purchase_amount: 300.0,
@@ -384,10 +384,10 @@ export const initialPromotions: Promotion[] = [
   },
   {
     id: 'b0000000-0000-4000-8000-000000000002',
-    code: 'BLACKFRIDAY15',
+    code: 'DEMO-BLACKFRIDAY15',
     name: 'Campaña Black Friday Hardware Profesional',
     description:
-      '15% de descuento en equipos seleccionados del 20 al 30 de noviembre.',
+      '15% de descuento en equipos seleccionados del 20 al 30 de noviembre con el código DEMO-BLACKFRIDAY15. Cupón de demostración: no es canjeable en ninguna tienda real.',
     discount_type: 'percentage',
     discount_value: 15.0,
     min_purchase_amount: 500.0,

@@ -65,7 +65,7 @@ async function runTests() {
   assert.ok(promos.length >= 2, `Expected at least 2 promotions, got ${promos.length}`);
   console.log(`✅ Found ${promos.length} promotions`);
 
-  const code10 = await getPromotionByCode('estudio10'); // Case insensitive check
+  const code10 = await getPromotionByCode('demo-estudio10'); // Case insensitive check
   assert.ok(code10 !== null, 'Should find promotion by code case-insensitively');
   assert.strictEqual(code10?.discount_value, 10);
   console.log(`✅ Found promo code ${code10?.code} with ${code10?.discount_value}% discount`);
