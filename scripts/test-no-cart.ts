@@ -148,7 +148,8 @@ async function run() {
     const Promociones = (await import('../src/app/promociones/page')).default;
     const html = renderToStaticMarkup((await Promociones()) as React.ReactElement);
     assert.ok(!/p[aá]gina del carrito/i.test(html), 'promotions terms must not send buyers to a cart');
-    assert.ok(/ESTUDIO10/.test(html), 'promotions page keeps listing the promotions');
+    assert.ok(/DEMO-ESTUDIO10/.test(html), 'promotions page keeps listing the promotions');
+    assert.ok(!/(?<!DEMO-)ESTUDIO10/.test(html), 'promotions page never shows the retired bare ESTUDIO10 code');
 
     assert.ok(exists('src/components/AttributionTracker.tsx'), 'inbound attribution tracker is kept');
     assert.ok(exists('src/lib/attribution.ts'), 'attribution helpers are kept');
