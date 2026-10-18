@@ -3,6 +3,7 @@ import './globals.css';
 import { getStoreSettings } from '@/lib/db';
 import { CustomHeadScript } from '@/components/CustomHeadScript';
 import { AttributionTracker } from '@/components/AttributionTracker';
+import { NavigationProgress } from '@/components/NavigationProgress';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { getSiteUrl } from '@/lib/catalog';
@@ -108,6 +109,7 @@ export default async function RootLayout({
       </head>
       <body className="flex min-h-screen flex-col bg-slate-950 font-sans text-slate-100 antialiased selection:bg-cyan-500 selection:text-slate-950">
         <AttributionTracker />
+        <NavigationProgress />
         <Navbar />
         <main className="flex-1 w-full">{children}</main>
         <Footer />
