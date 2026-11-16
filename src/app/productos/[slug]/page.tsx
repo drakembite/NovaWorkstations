@@ -20,15 +20,17 @@ import {
   absoluteUrl,
   buildBreadcrumbJsonLd,
   serializeJsonLd,
+  stripJsonLdOffers,
   STORE_NAME,
 } from '@/lib/catalog';
+import { formatSoles, getReferenceRate } from '@/lib/exchange-rate';
 import { BuyAction } from '@/components/BuyAction';
 import {
   DEMO_POLICY_LABEL,
   STORE_POLICY,
   WARRANTY_LABEL,
 } from '@/lib/store-policy';
-import { DEMO_NOTICE_LONG } from '@/lib/store-copy';
+import { DEMO_NOTICE_LONG, REFERENCE_PRICE_NOTICE, exchangeRateNote } from '@/lib/store-copy';
 
 type ProductPageProps = {
   params: Promise<{ slug: string }>;
@@ -80,9 +82,12 @@ export default async function ProductDetailPage(props: ProductPageProps) {
   const hasDiscount =
     product.compare_at_price != null && product.compare_at_price > product.price;
 
-  const savingsAmount = hasDiscount
-    ? (product.compare_at_price! - product.price).toFixed(2)
-    : null;
+  const savingsValue = hasDiscount ? product.compare_at_price! - product.price : 0;
+  const savingsAmount = hasDiscount ? savingsValue.toFixed(2) : null;
+
+  // Read on the server and passed down as plain values: null shows USD only, nothing else.
+  const reference = await getReferenceRate();
+  const rate = reference ? reference.rate : null;
 
   const discountPercentage = hasDiscount
     ? Math.round(
@@ -90,7 +95,6 @@ export default async function ProductDetailPage(props: ProductPageProps) {
       )
     : 0;
 
-  const inStock = product.stock_quantity > 0;
   const specsEntries = Object.entries(product.specs_json || {});
 
   // Default JSON-LD for rich snippets if custom_head_jsonld is not provided
@@ -107,18 +111,6 @@ export default async function ProductDetailPage(props: ProductPageProps) {
       '@type': 'Brand',
       name: product.brand,
     },
-    offers: {
-      '@type': 'Offer',
-      priceCurrency: product.currency || 'USD',
-      price: product.price,
-      availability: inStock
-        ? 'https://schema.org/InStock'
-        : 'https://schema.org/OutOfStock',
-      seller: {
-        '@type': 'Organization',
-        name: 'NovaWorkstations',
-      },
-    },
   };
 
   const breadcrumbJsonLd = buildBreadcrumbJsonLd([
@@ -127,11 +119,19 @@ export default async function ProductDetailPage(props: ProductPageProps) {
     { name: product.title, path: `/productos/${product.slug}` },
   ]);
 
-  const jsonLdContent = product.custom_head_jsonld
-    ? typeof product.custom_head_jsonld === 'string'
-      ? product.custom_head_jsonld
-      : JSON.stringify(product.custom_head_jsonld)
-    : JSON.stringify(fallbackJsonLd);
+  // The USD price is a reference, not a seller's offer: stored JSON-LD loses any `offers` too.
+  let jsonLdContent = JSON.stringify(fallbackJsonLd);
+  if (product.custom_head_jsonld) {
+    try {
+      const stored =
+        typeof product.custom_head_jsonld === 'string'
+          ? JSON.parse(product.custom_head_jsonld)
+          : product.custom_head_jsonld;
+      jsonLdContent = JSON.stringify(stripJsonLdOffers(stored));
+    } catch {
+      // Unreadable stored JSON-LD: keep the default block.
+    }
+  }
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
@@ -263,33 +263,35 @@ export default async function ProductDetailPage(props: ProductPageProps) {
             <div className="flex flex-wrap items-baseline gap-3">
               <span className="text-3xl font-black text-white sm:text-4xl">
                 US$ {product.price.toFixed(2)}
+                {rate != null && (
+                  <span className="ml-2 text-lg font-bold text-slate-300">
+                    {` ≈ ${formatSoles(product.price, rate)}`}
+                  </span>
+                )}
               </span>
 
               {hasDiscount && (
                 <>
                   <span className="text-lg text-slate-500 line-through">
                     US$ {product.compare_at_price!.toFixed(2)}
+                    {rate != null && ` ≈ ${formatSoles(product.compare_at_price!, rate)}`}
                   </span>
                   <span className="rounded-md bg-rose-500/20 border border-rose-500/40 px-2 py-0.5 text-xs font-extrabold text-rose-400">
                     Ahorras US$ {savingsAmount} (-{discountPercentage}%)
+                    {rate != null && ` ≈ ${formatSoles(savingsValue, rate)}`}
                   </span>
                 </>
               )}
             </div>
 
-            {/* Live Stock Status & Shipping text badges */}
-            <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-slate-800 pt-4">
-              {inStock ? (
-                <div className="inline-flex items-center gap-2 rounded-lg bg-emerald-500/10 border border-emerald-500/30 px-3 py-1.5 text-xs font-bold text-emerald-400">
-                  <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-                  <span>En Stock ({product.stock_quantity} unidades disponibles)</span>
-                </div>
-              ) : (
-                <div className="inline-flex items-center gap-2 rounded-lg bg-rose-500/10 border border-rose-500/30 px-3 py-1.5 text-xs font-bold text-rose-400">
-                  <span>Agotado temporalmente</span>
-                </div>
-              )}
+            {/* Reference price notice and exchange rate used for the soles figures */}
+            <p className="mt-3 text-xs leading-relaxed text-slate-400">{REFERENCE_PRICE_NOTICE}</p>
+            {reference && (
+              <p className="mt-1 text-[11px] leading-relaxed text-slate-500">{exchangeRateNote(reference)}</p>
+            )}
 
+            {/* Shipping text badge */}
+            <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-slate-800 pt-4">
               <div className="inline-flex items-center gap-1.5 rounded-lg bg-blue-500/10 border border-blue-500/30 px-3 py-1.5 text-xs font-semibold text-blue-300">
                 <Truck className="h-3.5 w-3.5 text-cyan-400 shrink-0" />
                 <span>{product.shipping_text}</span>

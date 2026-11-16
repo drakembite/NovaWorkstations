@@ -32,6 +32,12 @@ import {
 
 async function testCatalogSsr() {
   console.log('🧪 Starting Catalog & Product Detail SSR Tests...');
+  // Offline: no test reaches the BCRP. Without a rate the pages show USD only.
+  (await import('../src/lib/exchange-rate')).__setRateTestHooks({
+    fetch: async () => {
+      throw new Error('offline test');
+    },
+  });
 
   const allProducts = await getProducts();
   assert.ok(allProducts.length > 0, 'Database should return seeded products');
@@ -242,6 +248,7 @@ async function testCatalogSsr() {
     assert.ok(cardHtml.includes(sampleProduct.brand), 'Card HTML must include product brand');
     assert.ok(cardHtml.includes(sampleProduct.shipping_text), 'Card HTML must include shipping text');
     assert.ok(!cardHtml.includes('Agregar al Carrito'), 'Card HTML must not offer a cart');
+    assert.ok(!/en stock|agotad/i.test(cardHtml), 'Card HTML must not carry a stock label');
 
     console.log('✅ ProductCard rendering verified.');
   }

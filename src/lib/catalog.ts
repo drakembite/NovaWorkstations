@@ -72,6 +72,22 @@ export function serializeJsonLd(data: unknown): string {
   return JSON.stringify(data).replace(/</g, '\\u003c');
 }
 
+/**
+ * Returns a copy of a JSON-LD value without any `offers` key, at any depth. The USD price is a
+ * reference, not a seller's offer, so no Product JSON-LD may claim an Offer, availability or price validity.
+ */
+export function stripJsonLdOffers(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(stripJsonLdOffers);
+  if (value && typeof value === 'object') {
+    const out: Record<string, unknown> = {};
+    for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
+      if (key !== 'offers') out[key] = stripJsonLdOffers(child);
+    }
+    return out;
+  }
+  return value;
+}
+
 export function formatProduct(product: Product, baseUrl: string) {
   return {
     id: product.id,

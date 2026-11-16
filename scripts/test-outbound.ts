@@ -57,13 +57,19 @@ async function run() {
   process.chdir(tmp);
 
   try {
+    // Offline: no test reaches the BCRP. Without a rate the pages show USD only.
+    (await import('../src/lib/exchange-rate')).__setRateTestHooks({
+      fetch: async () => {
+        throw new Error('offline test');
+      },
+    });
     const { renderToStaticMarkup } = await import('react-dom/server');
     const db = await import('../src/lib/db');
     const products = await db.getProducts();
     assert.strictEqual(products.length, 12);
     const linked = products.filter((p) => p.buy_url);
     assert.strictEqual(linked.length, 12, 'every product has a link');
-    assert.ok(products.every((p) => p.stock_quantity > 0 && p.buy_url), 'every product that shows stock has a buy link');
+    assert.ok(products.every((p) => p.stock_quantity > 0 && p.buy_url), 'every product has a buy link');
 
     const ProductDetailPage = (await import('../src/app/productos/[slug]/page')).default;
     const { ProductCard } = await import('../src/components/ProductCard');
@@ -103,14 +109,15 @@ async function run() {
         assert.ok(html.includes(NO_LINK_TEXT), `${product.sku}: neutral message shown`);
       }
 
-      // JSON-LD Offer is unchanged: no url / seller change introduced by the buy link.
+      // The USD price is a reference, not a seller's offer: no Offer, availability or seller in the JSON-LD.
       const productLd = getJsonLdBlocks(tree).find((b) => b['@type'] === 'Product');
       assert.ok(productLd, 'Product JSON-LD present');
-      assert.deepStrictEqual(
-        Object.keys(productLd.offers).sort(),
-        ['@type', 'availability', 'price', 'priceCurrency', 'seller'],
-        `${product.sku}: Offer keys unchanged`
+      assert.ok(!('offers' in productLd), `${product.sku}: Product JSON-LD has no offers`);
+      assert.ok(
+        !/Offer|availability|InStock|OutOfStock|priceValidUntil|seller/.test(JSON.stringify(productLd)),
+        `${product.sku}: no Offer, availability or seller anywhere in the Product JSON-LD`
       );
+      assert.ok(!/en stock|agotad|unidades disponibles/i.test(html), `${product.sku}: no stock claim on the page`);
     }
     console.log('✅ Product pages: button for linked products, neutral text otherwise, disclosure everywhere.');
 
@@ -124,6 +131,7 @@ async function run() {
       const buyAnchors = anchors.filter((a) => a.rel === 'nofollow noopener noreferrer');
       assert.ok(!html.includes('Agregar al Carrito') && !html.includes('Añadir'), 'no add-to-cart on cards');
       assert.ok(/intermediario/i.test(html) && !/demostraci[oó]n/i.test(html), `${product.sku}: card carries the short intermediary notice`);
+      assert.ok(!/en stock|agotad/i.test(html), `${product.sku}: no stock label on the card`);
       if (product.buy_url) {
         assert.strictEqual(buyAnchors.length, 1);
         assert.strictEqual(buyAnchors[0].href, product.buy_url);

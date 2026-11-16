@@ -199,6 +199,12 @@ async function run() {
     console.log('\n--- Test 4: promotions page and admin render the DEMO- codes ---');
     {
       const { renderToStaticMarkup } = await import('react-dom/server');
+      // Offline: no test reaches the BCRP.
+      (await import('../src/lib/exchange-rate')).__setRateTestHooks({
+        fetch: async () => {
+          throw new Error('offline test');
+        },
+      });
       const Promociones = (await import('../src/app/promociones/page')).default;
       const html = renderToStaticMarkup((await Promociones()) as React.ReactElement);
       assert.ok(html.includes(NEW_ESTUDIO), 'promotions page lists DEMO-ESTUDIO10');

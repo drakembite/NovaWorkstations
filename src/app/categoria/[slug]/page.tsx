@@ -14,6 +14,7 @@ import {
   STORE_NAME,
 } from '@/lib/catalog';
 import { ProductCard } from '@/components/ProductCard';
+import { getReferenceRate } from '@/lib/exchange-rate';
 
 type PageProps = {
   params: Promise<{ slug: string }>;
@@ -49,6 +50,9 @@ export default async function CategoryPage(props: PageProps) {
 
   const allProducts = await getProducts();
   const filteredProducts = filterProductsByCategory(allProducts, rawSlug);
+  // Server-side read, passed down as a plain number: null shows USD only.
+  const referenceRate = await getReferenceRate();
+  const rate = referenceRate ? referenceRate.rate : null;
 
   const allCategories = Object.values(KNOWN_CATEGORIES);
 
@@ -153,7 +157,7 @@ export default async function CategoryPage(props: PageProps) {
         ) : (
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {filteredProducts.map((product) => (
-              <ProductCard key={product.id} product={product} />
+              <ProductCard key={product.id} product={product} rate={rate} />
             ))}
           </div>
         )}

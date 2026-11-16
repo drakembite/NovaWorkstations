@@ -3,12 +3,15 @@
 import React, { useState } from 'react';
 import { Tag, Copy, Check, Calendar, AlertCircle } from 'lucide-react';
 import { Promotion } from '@/types/database';
+import { formatSoles } from '@/lib/exchange-rate';
 
 interface CouponCardProps {
   promotion: Promotion;
+  /** Reference rate (S/ per US$) read by the server page; null or absent shows USD only. */
+  rate?: number | null;
 }
 
-export function CouponCard({ promotion }: CouponCardProps) {
+export function CouponCard({ promotion, rate = null }: CouponCardProps) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
@@ -26,7 +29,7 @@ export function CouponCard({ promotion }: CouponCardProps) {
   const discountLabel =
     promotion.discount_type === 'percentage'
       ? `${promotion.discount_value}% OFF`
-      : `US$ ${promotion.discount_value.toFixed(2)} OFF`;
+      : `US$ ${promotion.discount_value.toFixed(2)} OFF${rate != null ? ` ≈ ${formatSoles(promotion.discount_value, rate)}` : ''}`;
 
   const endDate = new Date(promotion.ends_at).toLocaleDateString('es-PE', {
     day: 'numeric',
@@ -69,6 +72,7 @@ export function CouponCard({ promotion }: CouponCardProps) {
         {promotion.min_purchase_amount > 0 && (
           <span className="rounded-md bg-slate-800/80 px-2 py-1 border border-slate-700/60">
             Mínimo: US$ {promotion.min_purchase_amount.toFixed(2)}
+            {rate != null && ` ≈ ${formatSoles(promotion.min_purchase_amount, rate)}`}
           </span>
         )}
         {promotion.applies_to_category ? (

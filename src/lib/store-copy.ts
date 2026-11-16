@@ -14,3 +14,13 @@ export const DEMO_NOTICE_SHORT =
 /** Footer statement, site wide. */
 export const DEMO_NOTICE_FOOTER =
   'NovaWorkstations es un intermediario: la compra, el pago y el envío se realizan en la tienda a la que te lleva el botón «Comprar».';
+
+/** Product page, next to the price: the USD price is a reference, not a seller's offer. */
+export const REFERENCE_PRICE_NOTICE =
+  'Precio de referencia de NovaWorkstations, no es una oferta: confirma el precio final y la disponibilidad en la tienda de destino.';
+
+/** Product page: how the soles figures were converted. `ref.asOf` is an ISO date. */
+export function exchangeRateNote(ref: { rate: number; asOf: string }): string {
+  const [y, m, d] = ref.asOf.split('-');
+  return `Tipo de cambio promedio S/ ${ref.rate.toFixed(3)} por US$ (BCRP, al ${d}/${m}/${y}). Referencial.`;
+}

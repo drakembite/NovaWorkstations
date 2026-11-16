@@ -14,6 +14,7 @@ import {
 import { Promotion } from '@/types/database';
 import { getPromotions } from '@/lib/db';
 import { CouponCard } from '@/components/CouponCard';
+import { getReferenceRate } from '@/lib/exchange-rate';
 import { now } from '@/lib/clock';
 import { COMMERCIAL_EVENTS, EVENT_STATUS_LABEL, eventStatus } from '@/lib/promo-events';
 
@@ -48,6 +49,10 @@ export default async function PromocionesPage() {
   } catch (err) {
     console.warn('[Promociones] Error fetching promotions:', err);
   }
+
+  // Server-side read, passed down as a plain number: null shows USD only.
+  const referenceRate = await getReferenceRate();
+  const rate = referenceRate ? referenceRate.rate : null;
 
   // Statuses come from the event dates and the (injectable) clock, never from typed labels.
   const at = now();
@@ -85,7 +90,7 @@ export default async function PromocionesPage() {
           {promotions.length > 0 ? (
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
               {promotions.map((promo) => (
-                <CouponCard key={promo.id} promotion={promo} />
+                <CouponCard key={promo.id} promotion={promo} rate={rate} />
               ))}
             </div>
           ) : (

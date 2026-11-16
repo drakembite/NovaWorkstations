@@ -104,6 +104,12 @@ async function run() {
   process.chdir(tmp);
 
   try {
+    // Offline: no test reaches the BCRP. Without a rate the pages show USD only.
+    (await import('../src/lib/exchange-rate')).__setRateTestHooks({
+      fetch: async () => {
+        throw new Error('offline test');
+      },
+    });
     const { renderToStaticMarkup } = await import('react-dom/server');
     const db = await import('../src/lib/db');
     const render = async (element: unknown) => renderToStaticMarkup((await element) as React.ReactElement);
@@ -316,15 +322,20 @@ async function run() {
     }
 
     // -------------------------------------------------------------------
-    // 6. Stock line is untouched
+    // 6. No stock claim: the stock numbers are not the seller's, so no page shows them
     // -------------------------------------------------------------------
-    console.log('\n--- Test 6: stock line untouched ---');
+    console.log('\n--- Test 6: no stock claim on any page ---');
     {
+      for (const [label, html] of Object.entries(pages)) {
+        const t = text(html);
+        assert.ok(!/en stock|agotad|unidades disponibles/i.test(t), `${label}: no stock claim`);
+      }
       for (const p of products) {
         const t = text(pages[`product ${p.sku}`]);
-        if (p.stock_quantity > 0) assert.ok(t.includes(`En Stock (${p.stock_quantity} unidades disponibles)`), `${p.sku} stock line`);
+        assert.ok(!t.includes(`${p.stock_quantity} unidades`), `${p.sku}: no stock count`);
+        assert.ok(t.includes('no es una oferta'), `${p.sku}: reference-price notice instead`);
       }
-      console.log('✅ "En Stock (N unidades disponibles)" kept.');
+      console.log('✅ No "En Stock", "Agotado" or unit counts; the reference-price notice is shown.');
     }
 
     // -------------------------------------------------------------------

@@ -17,6 +17,7 @@ import {
 import { getProducts } from '@/lib/db';
 import { ProductCard } from '@/components/ProductCard';
 import { absoluteUrl } from '@/lib/catalog';
+import { getReferenceRate } from '@/lib/exchange-rate';
 import {
   DEMO_POLICY_LABEL,
   POLICY_META_SHIPPING,
@@ -79,6 +80,9 @@ const CATEGORY_CARDS = [
 
 export default async function HomePage() {
   const allProducts = await getProducts();
+  // Server-side read, passed down as a plain number: null shows USD only.
+  const referenceRate = await getReferenceRate();
+  const rate = referenceRate ? referenceRate.rate : null;
 
   // Destacados: Workstations & high-performance gear
   const featuredProducts = allProducts.slice(0, 8);
@@ -231,7 +235,7 @@ export default async function HomePage() {
 
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {featuredProducts.map((product) => (
-            <ProductCard key={product.id} product={product} />
+            <ProductCard key={product.id} product={product} rate={rate} />
           ))}
         </div>
       </section>
@@ -273,7 +277,7 @@ export default async function HomePage() {
 
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {dealsProducts.slice(0, 4).map((product) => (
-              <ProductCard key={product.id} product={product} />
+              <ProductCard key={product.id} product={product} rate={rate} />
             ))}
           </div>
         </div>

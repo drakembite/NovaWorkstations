@@ -12,6 +12,12 @@ import PromocionesPage, { metadata as promoMeta } from '../src/app/promociones/p
 
 async function testLayoutAndInfo() {
   console.log('🧪 Starting Storefront Layout, Attribution & Info Pages Tests...');
+  // Offline: no test reaches the BCRP.
+  (await import('../src/lib/exchange-rate')).__setRateTestHooks({
+    fetch: async () => {
+      throw new Error('offline test');
+    },
+  });
 
   // =========================================================================
   // 1. Attribution Cookie Parsing & Backward Compatibility

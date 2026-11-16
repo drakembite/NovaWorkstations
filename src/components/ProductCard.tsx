@@ -3,15 +3,18 @@ import Link from 'next/link';
 import { Truck, Tag } from 'lucide-react';
 import { Product } from '@/types/database';
 import { normalizeCategorySlug } from '@/lib/catalog';
+import { formatSoles } from '@/lib/exchange-rate';
 import { DEMO_NOTICE_SHORT } from '@/lib/store-copy';
 import { BuyAction } from './BuyAction';
 
 export interface ProductCardProps {
   product: Product;
+  /** Reference rate (S/ per US$) read by the server page; null or absent shows USD only. */
+  rate?: number | null;
   className?: string;
 }
 
-export function ProductCard({ product, className = '' }: ProductCardProps) {
+export function ProductCard({ product, rate = null, className = '' }: ProductCardProps) {
   const hasDiscount =
     product.compare_at_price != null && product.compare_at_price > product.price;
 
@@ -21,7 +24,6 @@ export function ProductCard({ product, className = '' }: ProductCardProps) {
       )
     : 0;
 
-  const inStock = product.stock_quantity > 0;
   const categorySlug = normalizeCategorySlug(product.category);
 
   return (
@@ -65,22 +67,11 @@ export function ProductCard({ product, className = '' }: ProductCardProps) {
 
       {/* Product Info */}
       <div className="mt-4 flex flex-1 flex-col">
-        {/* Brand & Stock indicator */}
+        {/* Brand */}
         <div className="flex items-center justify-between gap-2">
           <span className="text-[11px] font-bold uppercase tracking-wider text-cyan-400">
             {product.brand}
           </span>
-
-          {inStock ? (
-            <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-emerald-400">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              En stock ({product.stock_quantity})
-            </span>
-          ) : (
-            <span className="text-[11px] font-semibold text-rose-400">
-              Agotado
-            </span>
-          )}
         </div>
 
         {/* Title */}
@@ -105,10 +96,16 @@ export function ProductCard({ product, className = '' }: ProductCardProps) {
             {hasDiscount && (
               <span className="text-xs text-slate-500 line-through">
                 US$ {product.compare_at_price!.toFixed(2)}
+                {rate != null && ` ≈ ${formatSoles(product.compare_at_price!, rate)}`}
               </span>
             )}
             <span className="text-base font-extrabold tracking-tight text-white">
               US$ {product.price.toFixed(2)}
+              {rate != null && (
+                <span className="ml-1.5 text-xs font-semibold text-slate-400">
+                  {` ≈ ${formatSoles(product.price, rate)}`}
+                </span>
+              )}
             </span>
           </div>
 
