@@ -1,12 +1,12 @@
-// The demo store's declared policy, stated once.
+// The store's declared policy, stated once.
 //
-// NovaWorkstations sells nothing: these figures are the policy the demo store DECLARES, and they
+// NovaWorkstations is an intermediary: these figures are the policy the store DECLARES, and they
 // are the ground truth for questions about delivery, returns and warranty. Every page, the
 // navbar, the footer and the metadata read them from here so they can never disagree. No other
 // source file may hardcode these numbers (scripts/test-demo-copy.ts enforces it).
 
 /** Label shown wherever the declared policy is stated. */
-export const DEMO_POLICY_LABEL = 'Política de la tienda de demostración';
+export const DEMO_POLICY_LABEL = 'Política de la tienda';
 
 export const STORE_POLICY = {
   /** Orders confirmed before this hour (24h clock) leave the same business day. */
@@ -74,12 +74,12 @@ export const POLICY_FOOTER_SHIPPING = `Entrega en ${LIMA_DELIVERY_SHORT} en Lima
 export const POLICY_SHIPPING_SUMMARY = `Entrega en ${LIMA_DELIVERY_SHORT} en Lima y ${PROVINCES_DELIVERY_SHORT} a nivel nacional, corte a las ${DISPATCH_CUTOFF_LABEL} y envío gratis desde ${FREE_SHIPPING_LABEL}.`;
 
 /** Meta descriptions. */
-export const POLICY_META_SHIPPING = `Envíos en ${LIMA_DELIVERY_SHORT} en Lima y garantía de ${WARRANTY_LABEL} (política de la tienda de demostración).`;
+export const POLICY_META_SHIPPING = `Envíos en ${LIMA_DELIVERY_SHORT} en Lima y garantía de ${WARRANTY_LABEL} (política de la tienda).`;
 
 /** What happens after the buy button: the destination store takes over. */
 export const DESTINATION_STORE_NOTE =
-  'Esta tienda no vende ni despacha: al pulsar «Comprar» la compra, el envío, las devoluciones y la garantía los gestiona la tienda donde compres, con sus propias condiciones.';
+  'Esta tienda es un intermediario: al pulsar «Comprar» la compra, el envío, las devoluciones y la garantía los gestiona la tienda donde compres, con sus propias condiciones.';
 
-/** The demo store has no mailbox: nothing here may be answered by email. */
+/** The store has no mailbox: nothing here may be answered by email. */
 export const NO_MAILBOX_NOTE =
-  'La tienda de demostración no tiene buzón de atención al cliente: no hay correo al que escribir.';
+  'Esta tienda no tiene buzón de atención al cliente: no hay correo al que escribir.';

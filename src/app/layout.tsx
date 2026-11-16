@@ -17,7 +17,7 @@ export const metadata: Metadata = {
     default: 'NovaWorkstations | Hardware Profesional para Creadores e Ingenieros',
     template: '%s | NovaWorkstations',
   },
-  description: `Estaciones de trabajo de alto rendimiento, componentes, laptops para arquitectura y monitores 4K de grado profesional. ${POLICY_META_SHIPPING} Tienda de demostración: no vende ni cobra.`,
+  description: `Estaciones de trabajo de alto rendimiento, componentes, laptops para arquitectura y monitores 4K de grado profesional. ${POLICY_META_SHIPPING} Intermediario: la compra se realiza en la tienda de destino.`,
   keywords: [
     'NovaWorkstations',
     'workstations',

@@ -153,7 +153,7 @@ export default async function HomePage() {
             </div>
             <div className="flex items-center gap-2">
               <CheckCircle2 className="h-4 w-4 text-indigo-400" />
-              <span>Tienda de demostración: no vende ni cobra</span>
+              <span>Intermediario: la compra se realiza en la tienda de destino</span>
             </div>
           </div>
         </div>

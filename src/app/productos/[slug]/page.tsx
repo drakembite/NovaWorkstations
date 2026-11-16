@@ -191,7 +191,7 @@ export default async function ProductDetailPage(props: ProductPageProps) {
             </div>
           </div>
 
-          {/* Value Highlights under image (declared policy of the demo store) */}
+          {/* Value Highlights under image (declared policy of the store) */}
           <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">{DEMO_POLICY_LABEL}</p>
           <div className="grid grid-cols-3 gap-3">
             <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-800/80 bg-slate-900/40 p-3 text-center">
@@ -309,7 +309,7 @@ export default async function ProductDetailPage(props: ProductPageProps) {
             </p>
           </div>
 
-          {/* Outbound purchase: this demo store sells nothing, the button leads to a real store */}
+          {/* Outbound purchase: this store is an intermediary, the button leads to the store where the purchase is made */}
           <div className="mt-8 border-t border-slate-800 pt-6">
             <BuyAction product={product} />
             <p className="mt-3 text-xs leading-relaxed text-slate-400">{DEMO_NOTICE_LONG}</p>

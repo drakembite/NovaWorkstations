@@ -81,9 +81,9 @@ async function run() {
 
       assert.ok(!html.includes('Agregar al Carrito'), `${product.sku}: no add-to-cart on the page`);
       assert.ok(!/Factura o Boleta/i.test(html) && !/\bRUC\b/.test(html), `${product.sku}: false invoice/RUC claim removed`);
-      assert.ok(/tienda de demostraci[oó]n/i.test(html), `${product.sku}: demo disclosure present`);
-      assert.ok(/no vende/i.test(html) && /cobra/i.test(html), `${product.sku}: disclosure says nothing is sold or charged`);
-      assert.ok(/tienda independiente/i.test(html), `${product.sku}: disclosure says the button leads to an independent store`);
+      assert.ok(/intermediario/i.test(html), `${product.sku}: intermediary disclosure present`);
+      assert.ok(!/demostraci[oó]n/i.test(html) && !/no vende/i.test(html), `${product.sku}: no demo or "sells nothing" claim`);
+      assert.ok(/tienda donde se realiza la compra/i.test(html), `${product.sku}: disclosure says the button leads to the store where the purchase is made`);
 
       if (product.buy_url) {
         assert.strictEqual(buyAnchors.length, 1, `${product.sku}: exactly one buy button`);
@@ -123,7 +123,7 @@ async function run() {
       const anchors = parseAnchors(html);
       const buyAnchors = anchors.filter((a) => a.rel === 'nofollow noopener noreferrer');
       assert.ok(!html.includes('Agregar al Carrito') && !html.includes('Añadir'), 'no add-to-cart on cards');
-      assert.ok(/tienda de demostraci[oó]n/i.test(html), `${product.sku}: card carries the short demo notice`);
+      assert.ok(/intermediario/i.test(html) && !/demostraci[oó]n/i.test(html), `${product.sku}: card carries the short intermediary notice`);
       if (product.buy_url) {
         assert.strictEqual(buyAnchors.length, 1);
         assert.strictEqual(buyAnchors[0].href, product.buy_url);
@@ -253,12 +253,12 @@ async function run() {
     // -------------------------------------------------------------------
     // 4. Footer statement
     // -------------------------------------------------------------------
-    console.log('\n--- Test 4: footer demo statement ---');
+    console.log('\n--- Test 4: footer intermediary statement ---');
     {
       const { Footer } = await import('../src/components/Footer');
       const html = renderToStaticMarkup(React.createElement(Footer));
-      assert.ok(/tienda de demostraci[oó]n/i.test(html), 'footer states this is a demonstration store');
-      assert.ok(/no vende/i.test(html) && /cobra/i.test(html), 'footer states nothing is sold or charged');
+      assert.ok(/intermediario/i.test(html), "footer states this store is an intermediary");
+      assert.ok(!/demostraci[oó]n/i.test(html) && !/no vende/i.test(html), "footer carries no demo or sells-nothing claim");
       console.log('✅ Footer statement verified.');
     }
 

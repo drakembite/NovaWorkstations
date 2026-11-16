@@ -277,7 +277,7 @@ export default async function AdminDashboardPage() {
               <span>Plataforma NovaWorkstations</span>
             </h3>
             <p className="mt-1.5 text-xs text-slate-400 leading-relaxed">
-              Tienda de demostración: cada producto envía al comprador a una tienda independiente. El catálogo notifica cambios mediante el webhook product.updated.
+              Intermediario: cada producto envía al comprador a la tienda donde se realiza la compra. El catálogo notifica cambios mediante el webhook product.updated.
             </p>
           </div>
         </div>

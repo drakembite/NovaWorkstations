@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 
 const PAGE_PATH = '/devoluciones-y-garantia';
-const PAGE_DESCRIPTION = `${DEMO_POLICY_LABEL}: ${RETURN_WINDOW_LABEL} de devolución sin costo y ${WARRANTY_LABEL} de garantía de fábrica. Esta tienda no vende: la compra se rige por la tienda donde compres.`;
+const PAGE_DESCRIPTION = `${DEMO_POLICY_LABEL}: ${RETURN_WINDOW_LABEL} de devolución sin costo y ${WARRANTY_LABEL} de garantía de fábrica. Esta tienda es un intermediario: la compra se rige por la tienda donde compres.`;
 
 export const metadata: Metadata = {
   // The root layout title template appends the store name.
@@ -54,7 +54,7 @@ export default function DevolucionesGarantiaPage() {
             Devoluciones y Garantía de Fábrica
           </h1>
           <p className="mt-3 text-base text-slate-400 sm:mx-auto sm:max-w-2xl">
-            Esta es la política de devoluciones y garantía que declara la tienda de demostración.
+            Esta es la política de devoluciones y garantía que declara la tienda.
           </p>
           <p className="mt-4 rounded-xl border border-slate-800 bg-slate-900/50 px-4 py-3 text-xs leading-relaxed text-slate-300 sm:mx-auto sm:max-w-2xl">
             {DESTINATION_STORE_NOTE} {NO_MAILBOX_NOTE}
@@ -138,7 +138,7 @@ export default function DevolucionesGarantiaPage() {
             ¿Cómo Solicitar una Devolución o Servicio de Garantía?
           </h2>
           <p className="mt-2 text-center text-sm text-slate-400">
-            Pasos de la política declarada. Al comprar fuera de esta tienda de demostración, se tramitan con la tienda donde compres.
+            Pasos de la política declarada. Al comprar en la tienda de destino, se tramitan con la tienda donde compres.
           </p>
 
           <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-4">
@@ -148,7 +148,7 @@ export default function DevolucionesGarantiaPage() {
               </div>
               <h3 className="font-semibold text-white text-sm">Registro de Solicitud</h3>
               <p className="mt-1.5 text-xs text-slate-400">
-                Contacta a la tienda donde compres (esta tienda de demostración no tiene buzón de atención al cliente) con tu número de compra y la descripción del motivo.
+                Contacta a la tienda donde compres (esta tienda no tiene buzón de atención al cliente) con tu número de compra y la descripción del motivo.
               </p>
             </div>
 

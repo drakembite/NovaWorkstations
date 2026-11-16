@@ -25,7 +25,7 @@ import {
 } from 'lucide-react';
 
 const PAGE_PATH = '/envios-y-entregas';
-const PAGE_DESCRIPTION = `${DEMO_POLICY_LABEL}: entrega en ${LIMA_DELIVERY_SHORT} en Lima Metropolitana, ${PROVINCES_DELIVERY_SHORT} a nivel nacional, corte a las ${DISPATCH_CUTOFF_LABEL} y envío gratis en compras mayores a ${FREE_SHIPPING_LABEL}. Esta tienda no vende ni despacha.`;
+const PAGE_DESCRIPTION = `${DEMO_POLICY_LABEL}: entrega en ${LIMA_DELIVERY_SHORT} en Lima Metropolitana, ${PROVINCES_DELIVERY_SHORT} a nivel nacional, corte a las ${DISPATCH_CUTOFF_LABEL} y envío gratis en compras mayores a ${FREE_SHIPPING_LABEL}. Esta tienda es un intermediario: la compra se realiza en la tienda de destino.`;
 
 export const metadata: Metadata = {
   // The root layout title template appends the store name.
@@ -56,7 +56,7 @@ export default function EnviosPage() {
             Envíos y Tiempos de Entrega
           </h1>
           <p className="mt-3 text-base text-slate-400 sm:mx-auto sm:max-w-2xl">
-            Estos son los plazos y tarifas de envío que declara la tienda de demostración para el Perú. {POLICY_SHIPPING_SUMMARY}
+            Estos son los plazos y tarifas de envío que declara la tienda para el Perú. {POLICY_SHIPPING_SUMMARY}
           </p>
           <p className="mt-4 rounded-xl border border-slate-800 bg-slate-900/50 px-4 py-3 text-xs leading-relaxed text-slate-300 sm:mx-auto sm:max-w-2xl">
             {DESTINATION_STORE_NOTE}

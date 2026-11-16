@@ -66,7 +66,7 @@ export default async function PromocionesPage() {
             Cupones y Promociones Vigentes
           </h1>
           <p className="mt-3 text-base text-slate-400 sm:mx-auto sm:max-w-2xl">
-            Estos son los códigos y campañas que publica la tienda de demostración. Se muestran solo como información: aquí no se pueden canjear.
+            Estos son los códigos y campañas de demostración que publica la tienda. Se muestran solo como información: aquí no se pueden canjear.
           </p>
         </div>
 
@@ -147,7 +147,7 @@ export default async function PromocionesPage() {
         <section className="mt-14 rounded-2xl border border-slate-800 bg-slate-900/30 p-6 sm:p-8">
           <h3 className="text-base font-bold text-white mb-3">Términos y Condiciones de Cupones</h3>
           <ul className="list-disc list-inside space-y-2 text-xs text-slate-400">
-            <li>Esta es una tienda de demostración: los cupones se publican solo como información y no se pueden canjear aquí.</li>
+            <li>Los cupones se publican solo como información y no se pueden canjear aquí.</li>
             <li>No son transferibles a dinero en efectivo ni acumulables entre sí en una misma transacción.</li>
             <li>El descuento se aplica sobre el subtotal de los productos aplicables, no sobre el costo de flete.</li>
             <li>NovaWorkstations se reserva el derecho de dar por concluida una campaña anticipadamente en caso de agotamiento de inventario.</li>

@@ -44,7 +44,7 @@ async function run() {
   // ---------------------------------------------------------------------
   console.log('\n--- Test 1: declared policy values ---');
   {
-    assert.strictEqual(DEMO_POLICY_LABEL, 'Política de la tienda de demostración');
+    assert.strictEqual(DEMO_POLICY_LABEL, 'Política de la tienda');
     assert.strictEqual(STORE_POLICY.dispatchCutoff, '16:00');
     assert.strictEqual(STORE_POLICY.limaDeliveryHours, 24);
     assert.strictEqual(STORE_POLICY.provincesDeliveryHours, '48-72');
@@ -151,7 +151,8 @@ async function run() {
         assert.ok(!/pedido/i.test(t), `${name}: no "pedido"`);
         assert.ok(!/\bórdenes?\b|\borden de compra/i.test(t), `${name}: no orders vocabulary`);
         assert.ok(/la tienda donde compres/i.test(t), `${name}: speaks in terms of the destination store`);
-        assert.ok(/no vende/i.test(t), `${name}: says this store sells nothing`);
+        assert.ok(/intermediario/i.test(t), `${name}: says this store is an intermediary`);
+        assert.ok(!/tienda de demostraci[oó]n/i.test(t), `${name}: does not call itself a demonstration store`);
       }
       const productHtml = pages[`product ${products[0].sku}`];
       assert.ok(text(productHtml).includes(DEMO_POLICY_LABEL), 'product page labels its policy claims as the demo policy');
