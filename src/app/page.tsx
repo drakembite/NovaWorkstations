@@ -19,8 +19,6 @@ import { ProductCard } from '@/components/ProductCard';
 import { absoluteUrl } from '@/lib/catalog';
 import {
   DEMO_POLICY_LABEL,
-  LIMA_DELIVERY_SHORT,
-  PROVINCES_DELIVERY_SHORT,
   POLICY_META_SHIPPING,
   STORE_POLICY,
   WARRANTY_LABEL,
@@ -37,7 +35,7 @@ export const metadata: Metadata = {
     url: absoluteUrl('/'),
     title: 'NovaWorkstations | Hardware Profesional',
     description:
-      `Estaciones de trabajo de alto rendimiento, monitores calibrados y accesorios profesionales. Despacho en ${LIMA_DELIVERY_SHORT} según la ${DEMO_POLICY_LABEL.toLowerCase()}.`,
+      `Estaciones de trabajo de alto rendimiento, monitores calibrados y accesorios profesionales. Envío según la tienda de destino y garantía según la ${DEMO_POLICY_LABEL.toLowerCase()}.`,
   },
 };
 
@@ -145,7 +143,7 @@ export default async function HomePage() {
           <div className="mt-3 flex flex-wrap items-center justify-center gap-6 text-xs text-slate-400 font-medium">
             <div className="flex items-center gap-2">
               <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-              <span>{`Despacho en ${LIMA_DELIVERY_SHORT} en Lima Metropolitana`}</span>
+              <span>Envío según la tienda de destino</span>
             </div>
             <div className="flex items-center gap-2">
               <CheckCircle2 className="h-4 w-4 text-cyan-400" />
@@ -218,7 +216,7 @@ export default async function HomePage() {
               Equipos Destacados
             </h2>
             <p className="mt-1 text-sm text-slate-400">
-              Hardware de máxima fiabilidad disponible para entrega inmediata.
+              Hardware de máxima fiabilidad, listo para comprar en la tienda de destino.
             </p>
           </div>
 
@@ -289,9 +287,9 @@ export default async function HomePage() {
               <Truck className="h-6 w-6" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-white">{`Envío Express ${LIMA_DELIVERY_SHORT}`}</h3>
+              <h3 className="text-base font-bold text-white">Envío según la tienda de destino</h3>
               <p className="mt-1 text-xs text-slate-400 leading-relaxed">
-                {`Despacho prioritario en Lima Metropolitana en ${LIMA_DELIVERY_SHORT} y ${PROVINCES_DELIVERY_SHORT} a nivel nacional. Embalaje industrial seguro para equipos delicados.`}
+                El despacho lo realiza la tienda donde compres (Amazon, Falabella u otra), con sus propios plazos y costos.
               </p>
             </div>
           </div>

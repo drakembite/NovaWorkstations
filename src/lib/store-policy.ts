@@ -1,20 +1,16 @@
 // The store's declared policy, stated once.
 //
-// NovaWorkstations is an intermediary: these figures are the policy the store DECLARES, and they
-// are the ground truth for questions about delivery, returns and warranty. Every page, the
-// navbar, the footer and the metadata read them from here so they can never disagree. No other
-// source file may hardcode these numbers (scripts/test-demo-copy.ts enforces it).
+// NovaWorkstations is an intermediary: it sells nothing and ships nothing. Delivery times, shipping
+// costs and coverage belong to the destination store (Amazon, Falabella or another), so this
+// module declares none of them. The returns and warranty figures below are the policy the store
+// DECLARES for now. Every page, the navbar, the footer and the metadata read them from here so
+// they can never disagree. No other source file may hardcode these numbers
+// (scripts/test-demo-copy.ts enforces it).
 
 /** Label shown wherever the declared policy is stated. */
 export const DEMO_POLICY_LABEL = 'Política de la tienda';
 
 export const STORE_POLICY = {
-  /** Orders confirmed before this hour (24h clock) leave the same business day. */
-  dispatchCutoff: '16:00',
-  limaDeliveryHours: 24,
-  provincesDeliveryHours: '48-72',
-  /** Shipping is free from this amount, in USD. */
-  freeShippingFromUsd: 150,
   returnDays: 30,
   warrantyMonths: 12,
   /** Refund after the return is verified. */
@@ -25,56 +21,37 @@ export const STORE_POLICY = {
   returnInspectionHours: '24-48',
 } as const;
 
-export interface ShippingZone {
-  zone: string;
-  leadTime: string;
-  feeBelowThresholdUsd: number;
-}
-
-/** Fee and lead time per destination. At or above the free-shipping amount every zone is free. */
-export const SHIPPING_ZONES: readonly ShippingZone[] = [
-  { zone: 'Lima Metropolitana y Callao', leadTime: 'Hasta 24 horas hábiles', feeBelowThresholdUsd: 10 },
-  { zone: 'Ciudades Principales de Costa (Trujillo, Chiclayo, Piura, Ica)', leadTime: '48 horas hábiles', feeBelowThresholdUsd: 18 },
-  { zone: 'Sierra y Sur (Arequipa, Cusco, Huancayo, Puno)', leadTime: '48 a 72 horas hábiles', feeBelowThresholdUsd: 18 },
-  { zone: 'Selva y Destinos Especiales (Iquitos, Pucallpa, Tarapoto)', leadTime: '72 a 96 horas hábiles', feeBelowThresholdUsd: 25 },
-];
-
 // ---------------------------------------------------------------------------
 // Short labels derived from the figures above
 // ---------------------------------------------------------------------------
-export const DISPATCH_CUTOFF_LABEL = `${STORE_POLICY.dispatchCutoff} hrs`;
-export const LIMA_DELIVERY_SHORT = `${STORE_POLICY.limaDeliveryHours}h`;
-export const PROVINCES_DELIVERY_SHORT = `${STORE_POLICY.provincesDeliveryHours}h`;
-export const FREE_SHIPPING_LABEL = `US$ ${STORE_POLICY.freeShippingFromUsd}`;
 export const RETURN_WINDOW_LABEL = `${STORE_POLICY.returnDays} días`;
 export const WARRANTY_LABEL = `${STORE_POLICY.warrantyMonths} meses`;
 
 /** Every hour figure the declared policy uses (a page may only show these). */
 export const ALL_HOUR_FIGURES: readonly string[] = [
-  String(STORE_POLICY.limaDeliveryHours),
-  STORE_POLICY.provincesDeliveryHours,
   STORE_POLICY.refundHours,
   String(STORE_POLICY.warrantyDiagnosisHours),
   STORE_POLICY.returnInspectionHours,
-  ...STORE_POLICY.provincesDeliveryHours.split('-'),
+  ...STORE_POLICY.refundHours.split('-'),
   ...STORE_POLICY.returnInspectionHours.split('-'),
-  ...SHIPPING_ZONES.flatMap((z) => z.leadTime.match(/\d+/g) ?? []),
 ];
 
 // ---------------------------------------------------------------------------
 // Sentences reused by several surfaces
 // ---------------------------------------------------------------------------
 /** Navbar announcement. */
-export const POLICY_BANNER = `${DEMO_POLICY_LABEL}: envío gratis en compras mayores a ${FREE_SHIPPING_LABEL} | despacho en ${LIMA_DELIVERY_SHORT} en Lima y ${PROVINCES_DELIVERY_SHORT} a nivel nacional`;
+export const POLICY_BANNER =
+  'NovaWorkstations es un intermediario: el envío, los plazos, las devoluciones y la garantía los define la tienda donde compres';
 
-/** Footer value proposition lines. */
-export const POLICY_FOOTER_SHIPPING = `Entrega en ${LIMA_DELIVERY_SHORT} en Lima y ${PROVINCES_DELIVERY_SHORT} en provincias. Gratis en compras > ${FREE_SHIPPING_LABEL}.`;
+/** Footer value proposition line. */
+export const POLICY_FOOTER_SHIPPING = 'Plazos y costos de envío según la tienda donde compres.';
 
 /** One-line summary of the shipping policy (shipping page header). */
-export const POLICY_SHIPPING_SUMMARY = `Entrega en ${LIMA_DELIVERY_SHORT} en Lima y ${PROVINCES_DELIVERY_SHORT} a nivel nacional, corte a las ${DISPATCH_CUTOFF_LABEL} y envío gratis desde ${FREE_SHIPPING_LABEL}.`;
+export const POLICY_SHIPPING_SUMMARY =
+  'Los plazos, los costos y la cobertura de envío los define la tienda de destino.';
 
 /** Meta descriptions. */
-export const POLICY_META_SHIPPING = `Envíos en ${LIMA_DELIVERY_SHORT} en Lima y garantía de ${WARRANTY_LABEL} (política de la tienda).`;
+export const POLICY_META_SHIPPING = `Envío según la tienda de destino y garantía de ${WARRANTY_LABEL} (política de la tienda).`;
 
 /** What happens after the buy button: the destination store takes over. */
 export const DESTINATION_STORE_NOTE =

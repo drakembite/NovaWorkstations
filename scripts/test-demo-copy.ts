@@ -40,18 +40,37 @@ async function run() {
   const { STORE_POLICY, DEMO_POLICY_LABEL } = policy;
 
   // ---------------------------------------------------------------------
-  // 1. The declared policy numbers are the experiment's ground truth: they must not drift
+  // 1. The declared policy: returns and warranty figures stay, no shipping promise exists
   // ---------------------------------------------------------------------
   console.log('\n--- Test 1: declared policy values ---');
   {
     assert.strictEqual(DEMO_POLICY_LABEL, 'Política de la tienda');
-    assert.strictEqual(STORE_POLICY.dispatchCutoff, '16:00');
-    assert.strictEqual(STORE_POLICY.limaDeliveryHours, 24);
-    assert.strictEqual(STORE_POLICY.provincesDeliveryHours, '48-72');
-    assert.strictEqual(STORE_POLICY.freeShippingFromUsd, 150);
     assert.strictEqual(STORE_POLICY.returnDays, 30);
     assert.strictEqual(STORE_POLICY.warrantyMonths, 12);
-    console.log('✅ Cutoff 16:00, 24h Lima, 48-72h provinces, free over US$ 150, 30 days, 12 months.');
+    assert.strictEqual(STORE_POLICY.refundHours, '48-72');
+    assert.strictEqual(STORE_POLICY.warrantyDiagnosisHours, 48);
+    assert.strictEqual(STORE_POLICY.returnInspectionHours, '24-48');
+    // This store is an intermediary: it declares no delivery time, cutoff, fee or free-shipping threshold.
+    for (const key of ['dispatchCutoff', 'limaDeliveryHours', 'provincesDeliveryHours', 'freeShippingFromUsd']) {
+      assert.ok(!(key in STORE_POLICY), `STORE_POLICY has no "${key}"`);
+    }
+    for (const name of [
+      'SHIPPING_ZONES',
+      'DISPATCH_CUTOFF_LABEL',
+      'LIMA_DELIVERY_SHORT',
+      'PROVINCES_DELIVERY_SHORT',
+      'FREE_SHIPPING_LABEL',
+    ]) {
+      assert.ok(!(name in policy), `store-policy does not export "${name}"`);
+    }
+    for (const name of ['RETURN_WINDOW_LABEL', 'WARRANTY_LABEL', 'DESTINATION_STORE_NOTE', 'NO_MAILBOX_NOTE']) {
+      assert.ok(name in policy, `store-policy keeps "${name}"`);
+    }
+    assert.strictEqual(
+      policy.POLICY_BANNER,
+      'NovaWorkstations es un intermediario: el envío, los plazos, las devoluciones y la garantía los define la tienda donde compres'
+    );
+    console.log('✅ 30 days, 12 months, returns hours kept; no shipping figures declared.');
   }
 
   // ---------------------------------------------------------------------
@@ -161,19 +180,17 @@ async function run() {
     }
 
     // -------------------------------------------------------------------
-    // 5. The same policy numbers on every page
+    // 5. Returns and warranty figures are identical everywhere
     // -------------------------------------------------------------------
-    console.log('\n--- Test 5: policy numbers are identical everywhere ---');
+    console.log('\n--- Test 5: returns and warranty figures are identical everywhere ---');
     {
       const P = policy;
       const mustContain: Record<string, string[]> = {
-        navbar: [P.FREE_SHIPPING_LABEL, P.LIMA_DELIVERY_SHORT, P.PROVINCES_DELIVERY_SHORT],
-        footer: [P.FREE_SHIPPING_LABEL, P.LIMA_DELIVERY_SHORT, P.PROVINCES_DELIVERY_SHORT, P.RETURN_WINDOW_LABEL, P.WARRANTY_LABEL],
-        shipping: [P.DISPATCH_CUTOFF_LABEL, P.FREE_SHIPPING_LABEL, P.LIMA_DELIVERY_SHORT, P.PROVINCES_DELIVERY_SHORT],
+        footer: [P.RETURN_WINDOW_LABEL, P.WARRANTY_LABEL],
         returns: [P.RETURN_WINDOW_LABEL, P.WARRANTY_LABEL],
-        home: [P.LIMA_DELIVERY_SHORT, P.WARRANTY_LABEL, P.RETURN_WINDOW_LABEL],
+        home: [P.WARRANTY_LABEL, P.RETURN_WINDOW_LABEL],
       };
-      mustContain[`product ${products[0].sku}`] = [P.LIMA_DELIVERY_SHORT, P.PROVINCES_DELIVERY_SHORT, P.WARRANTY_LABEL, P.RETURN_WINDOW_LABEL];
+      mustContain[`product ${products[0].sku}`] = [P.WARRANTY_LABEL, P.RETURN_WINDOW_LABEL];
       for (const [name, tokens] of Object.entries(mustContain)) {
         const t = text(pages[name]).toLowerCase();
         for (const token of tokens) assert.ok(t.includes(token.toLowerCase()), `${name} states "${token}"`);
@@ -203,21 +220,99 @@ async function run() {
         for (const m of t.matchAll(/(\d+)\s+meses\b/gi)) {
           assert.strictEqual(Number(m[1]), STORE_POLICY.warrantyMonths, `${name}: month figure "${m[0]}"`);
         }
-        for (const m of t.matchAll(/US\$\s?(\d+)\b(?![.,]\d)/g)) {
-          assert.ok(
-            [STORE_POLICY.freeShippingFromUsd, ...P.SHIPPING_ZONES.map((z) => z.feeBelowThresholdUsd)].includes(Number(m[1])),
-            `${name}: US$ figure "${m[0]}" is not a shared policy amount`
-          );
+      }
+      console.log('✅ Footer, home, product and returns agree with store-policy.ts.');
+    }
+
+    // -------------------------------------------------------------------
+    // 5b. No shipping promise, no physical address or opening hours, anywhere
+    // -------------------------------------------------------------------
+    console.log('\n--- Test 5b: no shipping promise, no address, no opening hours ---');
+    {
+      const { metadata: layoutMeta } = await import('../src/app/layout');
+      const { metadata: homeMeta } = await import('../src/app/page');
+      const { metadata: shippingMeta } = await import('../src/app/envios-y-entregas/page');
+      const { metadata: returnsMeta } = await import('../src/app/devoluciones-y-garantia/page');
+      const { metadata: promoMeta } = await import('../src/app/promociones/page');
+      const { KNOWN_CATEGORIES } = await import('../src/lib/catalog');
+
+      // Everything a visitor or a crawler can read: rendered pages plus page metadata.
+      const surfaces: Record<string, string> = {};
+      for (const [name, html] of Object.entries(pages)) surfaces[name] = text(html);
+      surfaces['meta layout'] = JSON.stringify(layoutMeta);
+      surfaces['meta home'] = JSON.stringify(homeMeta);
+      surfaces['meta shipping'] = JSON.stringify(shippingMeta);
+      surfaces['meta returns'] = JSON.stringify(returnsMeta);
+      surfaces['meta promociones'] = JSON.stringify(promoMeta);
+      for (const c of Object.values(KNOWN_CATEGORIES)) surfaces[`meta category ${c.slug}`] = JSON.stringify(c);
+
+      // A policy-block-only view of product pages (the rest is the seed's own spec text).
+      const policyOnly = (t: string) =>
+        t
+          .split(DEMO_POLICY_LABEL)
+          .slice(1)
+          .map((chunk) => chunk.slice(0, chunk.search(/Devolución fácil|soporte técnico local\./) + 20))
+          .join(' ');
+
+      const promises: Array<[string, RegExp]> = [
+        ['a "Despacho" promise', /despacho\s+(?:en|de|seguro|r[aá]pido|prioritario|inmediato|\d)|despachamos|despachad[oa]s? en/i],
+        ['an "Envío Express" promise', /env[ií]o\s+express|env[ií]os?\s+r[aá]pidos/i],
+        ['a dispatch cutoff', /hora de corte|corte a las|\b16:00\b|salen? el mismo d[ií]a/i],
+        ['a shipping fee in US$', /(?:costo|tarifa|cuesta)[^.]{0,40}US\$|US\$\s?(?:10|18|25)(?:\.00)?\b/i],
+        ['a free-shipping offer', /env[ií]o\s+(?:gratis|gratuito|100% bonificado)|gratis\s+en\s+compras|US\$\s?150\b/i],
+        ['an own delivery time', /entrega\s+en\s+\d|entrega\s+inmediata|(?:entregamos|llega)\s+en\s+\d/i],
+        ['a physical address', /San Isidro/i],
+        ['opening hours', /Lunes a S[aá]bado|\b09:00\b|\b18:00\b/i],
+      ];
+      for (const [name, t] of Object.entries(surfaces)) {
+        for (const [what, re] of promises) {
+          assert.ok(!re.test(t), `${name}: must not state ${what}`);
         }
       }
 
-      // The shipping table renders the shared zones verbatim.
-      const shipText = text(pages.shipping);
-      for (const zone of P.SHIPPING_ZONES) {
-        assert.ok(shipText.includes(zone.zone) && shipText.includes(zone.leadTime), `zone ${zone.zone} rendered from the module`);
-        assert.ok(shipText.includes(`US$ ${zone.feeBelowThresholdUsd.toFixed(2)}`), `fee for ${zone.zone}`);
+      // Delivery time in hours: nowhere but the returns page (refund / warranty hours are its own content).
+      for (const [name, t] of Object.entries(surfaces)) {
+        if (name === 'returns' || name.startsWith('category ') || name === 'promociones') continue;
+        const view = name.startsWith('product ') ? policyOnly(t) : t;
+        assert.ok(!/\d\s?(?:h\b|hrs\b|horas\b)/i.test(view), `${name}: must not state a delivery time in hours`);
       }
-      console.log('✅ Navbar, footer, home, product, shipping and returns agree with store-policy.ts.');
+
+      // The navbar banner and the footer line say the destination store decides.
+      assert.ok(
+        text(pages.navbar).includes(
+          'NovaWorkstations es un intermediario: el envío, los plazos, las devoluciones y la garantía los define la tienda donde compres'
+        ),
+        'navbar banner: the destination store decides shipping, times, returns and warranty'
+      );
+      assert.ok(
+        text(pages.footer).includes('Plazos y costos de envío según la tienda donde compres.'),
+        'footer: shipping times and costs depend on the destination store'
+      );
+
+      // Home and product pages use the destination-store wording.
+      const homeText = text(pages.home);
+      assert.ok(homeText.includes('Envío según la tienda de destino'), 'home card title');
+      assert.ok(
+        homeText.includes('El despacho lo realiza la tienda donde compres (Amazon, Falabella u otra), con sus propios plazos y costos.'),
+        'home card body'
+      );
+      for (const p of products) {
+        assert.ok(text(pages[`product ${p.sku}`]).includes('Envío según la tienda de destino'), `${p.sku}: shipping highlight`);
+      }
+
+      // The shipping page: short, and says the destination store defines times, costs and coverage.
+      const shipText = text(pages.shipping);
+      assert.ok(/plazos/i.test(shipText) && /costos/i.test(shipText) && /cobertura/i.test(shipText), 'shipping page names times, costs and coverage');
+      assert.ok(/la tienda de destino/i.test(shipText), 'shipping page points to the destination store');
+      assert.ok(/(?:define|definen)/i.test(shipText), 'shipping page says the destination store defines them');
+      assert.ok(/<table/i.test(pages.shipping) === false, 'shipping page has no zones table');
+      assert.ok(/href="\/categoria\/estaciones-de-trabajo"/.test(pages.shipping), 'shipping page links back to products');
+      assert.ok(shipText.length < 2500, `shipping page stays short (${shipText.length} chars)`);
+
+      // The URL stays in the sitemap.
+      const sitemap = fs.readFileSync(path.join(originalCwd, 'src/app/sitemap.xml/route.ts'), 'utf8');
+      assert.ok(sitemap.includes("'/envios-y-entregas'"), 'shipping page stays in the sitemap');
+      console.log('✅ No delivery time, cutoff, fee, free shipping, address or hours on any page or metadata.');
     }
 
     // -------------------------------------------------------------------

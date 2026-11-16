@@ -10,8 +10,6 @@ import {
   ShieldCheck,
   Headphones,
   Mail,
-  MapPin,
-  Clock,
   ExternalLink,
 } from 'lucide-react';
 import { DEMO_NOTICE_FOOTER } from '@/lib/store-copy';
@@ -44,7 +42,7 @@ export function Footer() {
                 <Truck className="h-5 w-5" />
               </div>
               <div>
-                <h4 className="text-sm font-semibold text-slate-200">Envíos Rápidos</h4>
+                <h4 className="text-sm font-semibold text-slate-200">Envío según la tienda</h4>
                 <p className="mt-1 text-xs text-slate-400">
                   {POLICY_FOOTER_SHIPPING}
                 </p>
@@ -107,14 +105,6 @@ export function Footer() {
               Especialistas en hardware de alto rendimiento para arquitectos, animadores, científicos de datos y estudios de ingeniería. Estaciones de trabajo certificadas y componentes de grado profesional.
             </p>
             <div className="mt-6 flex flex-col space-y-2 text-xs text-slate-400">
-              <div className="flex items-center gap-2">
-                <MapPin className="h-4 w-4 text-cyan-400 shrink-0" />
-                <span>San Isidro, Lima, Perú</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4 text-cyan-400 shrink-0" />
-                <span>Lunes a Sábado: 09:00 - 18:00 hrs</span>
-              </div>
               <div className="flex items-center gap-2">
                 <Mail className="h-4 w-4 text-cyan-400 shrink-0" />
                 <span>{NO_MAILBOX_NOTE}</span>

@@ -141,7 +141,7 @@ export const KNOWN_CATEGORIES: Record<string, CategoryInfo> = {
       'Hardware profesional con precios especiales y descuentos por tiempo limitado. Equipos nuevos con garantía oficial completa.',
     metaTitle: 'Ofertas Especiales en Hardware',
     metaDescription:
-      'Descuentos directos en laptops, monitores y accesorios profesionales. Despacho rápido y garantía de fábrica.',
+      'Descuentos directos en laptops, monitores y accesorios profesionales. El envío lo define la tienda de destino.',
   },
   'liquidacion': {
     slug: 'liquidacion',

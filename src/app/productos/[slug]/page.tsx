@@ -25,8 +25,6 @@ import {
 import { BuyAction } from '@/components/BuyAction';
 import {
   DEMO_POLICY_LABEL,
-  LIMA_DELIVERY_SHORT,
-  PROVINCES_DELIVERY_SHORT,
   STORE_POLICY,
   WARRANTY_LABEL,
 } from '@/lib/store-policy';
@@ -196,8 +194,8 @@ export default async function ProductDetailPage(props: ProductPageProps) {
           <div className="grid grid-cols-3 gap-3">
             <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-800/80 bg-slate-900/40 p-3 text-center">
               <Truck className="h-5 w-5 text-cyan-400 mb-1" />
-              <span className="text-[11px] font-bold text-white">{`Despacho ${LIMA_DELIVERY_SHORT}`}</span>
-              <span className="text-[10px] text-slate-400">Lima y Callao</span>
+              <span className="text-[11px] font-bold text-white">Envío según la tienda de destino</span>
+              <span className="text-[10px] text-slate-400">Plazos y costos propios</span>
             </div>
             <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-800/80 bg-slate-900/40 p-3 text-center">
               <ShieldCheck className="h-5 w-5 text-emerald-400 mb-1" />
@@ -323,7 +321,7 @@ export default async function ProductDetailPage(props: ProductPageProps) {
             <ul className="mt-3 space-y-2 text-xs text-slate-300">
               <li className="flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4 shrink-0 text-cyan-400" />
-                <span>{`Despacho seguro en ${STORE_POLICY.limaDeliveryHours} horas en Lima Metropolitana y ${PROVINCES_DELIVERY_SHORT} a todo el Perú.`}</span>
+                <span>Envío según la tienda de destino: plazos y costos los define la tienda donde compres.</span>
               </li>
               <li className="flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4 shrink-0 text-cyan-400" />

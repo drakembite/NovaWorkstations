@@ -153,6 +153,11 @@ async function testLayoutAndInfo() {
     assert.ok(enviosMeta.title, 'Envíos page must have title');
     assert.ok(String(enviosMeta.title).includes('Envíos'), 'Title must mention Envíos');
 
+    const description = String(enviosMeta.description);
+    assert.ok(/tienda de destino/i.test(description), 'Envíos description says the destination store decides');
+    assert.ok(!/\d\s?(?:h\b|hrs\b|horas\b)|16:00|env[ií]o gratis|US\$/i.test(description), 'Envíos description promises no time, cutoff, fee or free shipping');
+    assert.ok(!/\d\s?(?:h\b|hrs\b|horas\b)|US\$/i.test(String((enviosMeta.openGraph as any)?.description)), 'Envíos og:description promises no time or fee');
+
     const pageElement = EnviosPage();
     assert.ok(pageElement, 'EnviosPage must return React element');
 
