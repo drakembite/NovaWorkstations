@@ -98,7 +98,7 @@ export default async function CategoryPage(props: PageProps) {
               {filteredProducts.length}
             </span>
             <span className="text-xs font-medium text-slate-400">
-              {filteredProducts.length === 1 ? 'producto disponible' : 'productos disponibles'}
+              {filteredProducts.length === 1 ? 'producto listado' : 'productos listados'}
             </span>
           </div>
         </div>

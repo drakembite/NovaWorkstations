@@ -72,7 +72,7 @@ const CATEGORY_CARDS = [
   {
     slug: 'liquidacion',
     name: 'Liquidación Outlet',
-    description: 'Últimas unidades garantizadas con precios rebajados de liquidación.',
+    description: 'Equipos con precio rebajado en la tienda de destino.',
     icon: Zap,
     color: 'from-rose-600/20 to-pink-600/20 text-rose-400 border-rose-500/30',
   },
@@ -253,7 +253,7 @@ export default async function HomePage() {
                 Ofertas Especiales y Liquidación
               </h2>
               <p className="mt-1 text-sm text-slate-300">
-                Hardware con descuentos directos y últimas unidades garantizadas de fábrica.
+                Hardware con precios de referencia rebajados. Confirma el precio final en la tienda de destino.
               </p>
             </div>
 

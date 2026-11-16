@@ -166,7 +166,7 @@ export const KNOWN_CATEGORIES: Record<string, CategoryInfo> = {
       `Oportunidades outlet y liquidación de inventario con precios rebajados en equipos de alta gama con garantía de ${WARRANTY_LABEL} (${DEMO_POLICY_LABEL.toLowerCase()}).`,
     metaTitle: 'Liquidación y Outlet de Hardware',
     metaDescription:
-      'Últimas unidades en liquidación y precios reducidos en hardware profesional garantizado.',
+      'Equipos de hardware profesional con precio de referencia rebajado; confirma el precio final en la tienda de destino.',
   },
 };
 
