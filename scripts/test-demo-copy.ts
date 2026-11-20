@@ -122,7 +122,7 @@ async function run() {
     const { Navbar } = await import('../src/components/Navbar');
     const { Footer } = await import('../src/components/Footer');
     const Promociones = (await import('../src/app/promociones/page')).default;
-    const { setClock, resetClock } = await import('../src/lib/clock');
+    const { resetClock } = await import('../src/lib/clock');
 
     const products = await db.getProducts();
     const pages: Record<string, string> = {
@@ -339,59 +339,27 @@ async function run() {
     }
 
     // -------------------------------------------------------------------
-    // 7. /promociones: event statuses computed from dates against an injectable clock
+    // 7. /promociones: no demo coupons, no campaign calendar, no own discount claims
     // -------------------------------------------------------------------
-    console.log('\n--- Test 7: promotion event statuses follow the clock ---');
+    console.log('\n--- Test 7: the promotions page publishes no demo coupons and no campaigns ---');
     {
-      const { COMMERCIAL_EVENTS, eventStatus } = await import('../src/lib/promo-events');
-      assert.strictEqual(COMMERCIAL_EVENTS.length, 5);
-      for (const e of COMMERCIAL_EVENTS) {
-        assert.ok(!('status' in e), `${e.title}: no typed status label in the data`);
-        assert.ok(Date.parse(e.starts_at) < Date.parse(e.ends_at), `${e.title}: has a start before its end`);
+      const { metadata: promoMeta } = await import('../src/app/promociones/page');
+      const t = text(pages.promociones);
+      const meta = JSON.stringify(promoMeta);
+      for (const [name, surface] of [['page', t], ['metadata', meta]]) {
+        assert.ok(!/demostraci[oó]n/i.test(surface), `promotions ${name}: no "demostración"`);
+        assert.ok(!/DEMO-/.test(surface), `promotions ${name}: no DEMO- code`);
+        assert.ok(!/canjeable|no se pueden canjear/i.test(surface), `promotions ${name}: no wording about unredeemable coupons`);
+        assert.ok(!/\d+\s*%|OFF\b/i.test(surface), `promotions ${name}: no discount percentage`);
+        assert.ok(!/Black Friday|Cyber|Fiestas Patrias|Calendario/i.test(surface), `promotions ${name}: no campaign calendar`);
+        assert.ok(/no publica cupones propios/i.test(surface), `promotions ${name}: says the store publishes no coupons of its own`);
+        assert.ok(/tienda de destino/i.test(surface), `promotions ${name}: final price and offers belong to the destination store`);
       }
-      const statusesAt = async (iso: string) => {
-        setClock(() => new Date(iso));
-        try {
-          const html = await render((Promociones as any)());
-          return [...html.matchAll(/data-event-status="([^"]+)"[^>]*>([^<]+)</g)].map((m) => `${m[1]}:${m[2]}`);
-        } finally {
-          resetClock();
-        }
-      };
-      assert.deepStrictEqual(await statusesAt('2026-03-15T12:00:00-05:00'), [
-        'current:Vigente Ahora',
-        'upcoming:Próximamente',
-        'upcoming:Próximamente',
-        'upcoming:Próximamente',
-        'upcoming:Próximamente',
-      ]);
-      assert.deepStrictEqual(await statusesAt('2026-10-17T12:00:00-05:00'), [
-        'ended:Finalizado',
-        'ended:Finalizado',
-        'current:Vigente Ahora',
-        'upcoming:Próximamente',
-        'upcoming:Próximamente',
-      ]);
-      assert.deepStrictEqual(await statusesAt('2027-01-10T12:00:00-05:00'), [
-        'ended:Finalizado',
-        'ended:Finalizado',
-        'ended:Finalizado',
-        'ended:Finalizado',
-        'ended:Finalizado',
-      ]);
-
-      // Boundaries: the start instant is current, the end instant is current, one ms later is ended.
-      const october = COMMERCIAL_EVENTS[2];
-      assert.strictEqual(eventStatus(october, new Date(Date.parse(october.starts_at) - 1)), 'upcoming');
-      assert.strictEqual(eventStatus(october, new Date(october.starts_at)), 'current');
-      assert.strictEqual(eventStatus(october, new Date(october.ends_at)), 'current');
-      assert.strictEqual(eventStatus(october, new Date(Date.parse(october.ends_at) + 1)), 'ended');
-
-      // Coupons stay informational and the page says so.
-      const html = await render((Promociones as any)());
-      assert.ok(/no se pueden canjear/i.test(text(html)), 'promotions page keeps saying coupons are informational');
-      assert.ok(!/durante el proceso de compra/i.test(text(html)), 'no claim that coupons are applied in a purchase process');
-      console.log('✅ Statuses computed at three injected times, with inclusive boundaries.');
+      assert.ok(!/data-event-status/.test(pages.promociones), 'no event status badges');
+      assert.ok(!/Cupones vigentes/.test(t), 'no coupon section when no coupon is active');
+      assert.ok(/intermediario/i.test(t), 'the page carries the intermediary notice');
+      assert.ok(!fs.existsSync(path.join(__dirname, '..', 'src', 'lib', 'promo-events.ts')), 'the campaign calendar module is gone');
+      console.log('✅ /promociones states that the store has no coupons of its own and lists no campaigns.');
     }
 
     resetClock();

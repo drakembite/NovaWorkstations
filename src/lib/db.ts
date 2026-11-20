@@ -89,6 +89,17 @@ function backfillBuyLinks(products: Product[]): boolean {
 }
 
 /**
+ * The descriptions the two demo coupons carried while the seed still created them. They are kept here
+ * (the seed no longer has coupons) because both migrations below match stored rows by this exact text.
+ */
+export const DEMO_COUPON_DESCRIPTIONS = {
+  'DEMO-ESTUDIO10':
+    '10% de descuento en estaciones de trabajo y monitores con el código DEMO-ESTUDIO10. Cupón de demostración: no es canjeable en ninguna tienda real.',
+  'DEMO-BLACKFRIDAY15':
+    '15% de descuento en equipos seleccionados del 20 al 30 de noviembre con el código DEMO-BLACKFRIDAY15. Cupón de demostración: no es canjeable en ninguna tienda real.',
+} as const;
+
+/**
  * The two demo coupons were renamed with the `DEMO-` prefix. Stores keep their rows and the seed only
  * applies to empty stores, so existing data is migrated by this additive rename instead.
  * `description` is the text those rows carried before; it is replaced only while a row still has exactly
@@ -105,15 +116,46 @@ export const LEGACY_DEMO_COUPON_RENAMES: ReadonlyArray<{
     to: 'DEMO-ESTUDIO10',
     oldDescription:
       '10% de descuento directo en estaciones de trabajo y monitores aplicando el código en el carrito.',
-    newDescription: initialPromotions.find((p) => p.code === 'DEMO-ESTUDIO10')?.description ?? '',
+    newDescription: DEMO_COUPON_DESCRIPTIONS['DEMO-ESTUDIO10'],
   },
   {
     from: 'BLACKFRIDAY15',
     to: 'DEMO-BLACKFRIDAY15',
     oldDescription: '15% de descuento en equipos seleccionados del 20 al 30 de noviembre.',
-    newDescription: initialPromotions.find((p) => p.code === 'DEMO-BLACKFRIDAY15')?.description ?? '',
+    newDescription: DEMO_COUPON_DESCRIPTIONS['DEMO-BLACKFRIDAY15'],
   },
 ];
+
+/** The text a retired demo coupon carries afterwards. It names no code and makes no discount claim. */
+export const RETIRED_DEMO_COUPON_DESCRIPTION =
+  'Cupón retirado. Esta tienda no publica cupones propios: el precio final y las ofertas vigentes los define la tienda de destino.';
+
+/**
+ * The demo coupons are retired: they name codes no store accepts. Each row is deactivated and its
+ * description replaced, but only while it still has the exact demo text, so the step runs once: a row
+ * an admin turns back on afterwards stays on. Nothing is deleted. Runs after the rename above.
+ */
+export const RETIRED_DEMO_COUPONS: ReadonlyArray<{ code: string; description: string }> = Object.entries(
+  DEMO_COUPON_DESCRIPTIONS
+).map(([code, description]) => ({ code, description }));
+
+/**
+ * Idempotent, non-destructive retirement of the demo coupons (JSON fallback): a row whose code is a demo
+ * code (case-insensitive) and whose description is still the exact demo text is set inactive and gets
+ * RETIRED_DEMO_COUPON_DESCRIPTION. Returns true when anything changed (the caller persists the file).
+ */
+export function retireDemoCoupons(promotions: Promotion[]): boolean {
+  let changed = false;
+  for (const retired of RETIRED_DEMO_COUPONS) {
+    for (const promo of promotions) {
+      if (promo.code.toUpperCase() !== retired.code || promo.description !== retired.description) continue;
+      promo.is_active = false;
+      promo.description = RETIRED_DEMO_COUPON_DESCRIPTION;
+      changed = true;
+    }
+  }
+  return changed;
+}
 
 /**
  * Idempotent, non-destructive rename of the legacy demo coupon codes (JSON fallback).
@@ -205,6 +247,9 @@ async function readJsonDb(): Promise<DatabaseData> {
     if (!demoCouponsMigrated) {
       demoCouponsMigrated = true;
       if (renameLegacyDemoCoupons(data.promotions)) {
+        modified = true;
+      }
+      if (retireDemoCoupons(data.promotions)) {
         modified = true;
       }
     }
@@ -467,6 +512,21 @@ async function checkAndInitPostgres(): Promise<boolean> {
               );
             } catch (err: any) {
               console.warn('[DB] legacy demo coupon rename skipped:', err.message);
+            }
+          }
+
+          // Non-destructive retirement of the demo coupons, after the rename: deactivated and given the
+          // retired text only while the row still carries the exact demo text, so it runs once and a row
+          // an admin turns back on stays on. Logged and skipped on failure, like the rename.
+          for (const retired of RETIRED_DEMO_COUPONS) {
+            try {
+              await client.query(
+                `UPDATE promotions SET is_active = FALSE, description = $1
+                 WHERE UPPER(code) = $2 AND description = $3`,
+                [RETIRED_DEMO_COUPON_DESCRIPTION, retired.code, retired.description]
+              );
+            } catch (err: any) {
+              console.warn('[DB] demo coupon retirement skipped:', err.message);
             }
           }
 

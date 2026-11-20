@@ -378,14 +378,18 @@ async function run() {
   const originalCwd = process.cwd();
   fs.mkdirSync(path.join(tmp, 'data'));
   const fixedCoupon = {
-    ...initialPromotions[0],
     id: 'b0000000-0000-4000-8000-000000000099',
-    code: 'DEMO-FIJO50',
+    code: 'FIJO50',
+    name: 'Cupón fijo de prueba',
+    description: 'US$ 50 de descuento con el código FIJO50.',
     discount_type: 'fixed',
     discount_value: 50,
     min_purchase_amount: 300,
+    applies_to_category: null,
     starts_at: '2026-10-01T00:00:00Z',
     ends_at: '2026-12-31T23:59:59Z',
+    is_active: true,
+    created_at: '2026-10-16T12:00:00.000Z',
   };
   fs.writeFileSync(
     path.join(tmp, 'data', 'db.json'),

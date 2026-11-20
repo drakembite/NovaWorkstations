@@ -1,9 +1,8 @@
-// Verifies the PostgreSQL side of the demo coupon rename against a recording fake pool
-// (no real database, no network): guarded, additive, old-code-only and non-destructive.
+// Verifies the PostgreSQL side of the demo coupon rename and retirement against a recording fake pool
+// (no real database, no network): guarded, old-code-only, run-once and non-destructive.
 process.env.DATABASE_URL = 'postgresql://fake:fake@127.0.0.1:1/fake';
 
 import assert from 'assert';
-import { initialPromotions } from '../src/lib/seed-data';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const pg = require('pg');
@@ -35,7 +34,8 @@ async function run() {
   await db.getPromotions();
 
   const squash = (s: string) => s.replace(/\s+/g, ' ').trim();
-  const renames = executed.filter((e) => /UPDATE promotions/i.test(e.sql));
+  const renames = executed.filter((e) => /UPDATE promotions AS legacy/i.test(e.sql));
+  const retirements = executed.filter((e) => /UPDATE promotions SET is_active/i.test(e.sql));
 
   console.log('\n--- Test 1: one guarded UPDATE per demo coupon, after the schema exists ---');
   {
@@ -48,9 +48,9 @@ async function run() {
     const params = renames.map((r) => r.params);
     assert.deepStrictEqual(params[0]!.slice(0, 2), ['DEMO-ESTUDIO10', 'ESTUDIO10']);
     assert.deepStrictEqual(params[1]!.slice(0, 2), ['DEMO-BLACKFRIDAY15', 'BLACKFRIDAY15']);
-    assert.ok(params[0]!.includes(initialPromotions[0].description), 'ESTUDIO carries the new seed description');
+    assert.ok(params[0]!.includes(db.DEMO_COUPON_DESCRIPTIONS['DEMO-ESTUDIO10']), 'ESTUDIO carries the demo description');
     assert.ok(params[0]!.includes(OLD_ESTUDIO_DESCRIPTION), 'ESTUDIO only refreshes the exact old seed text');
-    assert.ok(params[1]!.includes(initialPromotions[1].description), 'BLACKFRIDAY carries the new seed description');
+    assert.ok(params[1]!.includes(db.DEMO_COUPON_DESCRIPTIONS['DEMO-BLACKFRIDAY15']), 'BLACKFRIDAY carries the demo description');
     assert.ok(params[1]!.includes(OLD_BLACKFRIDAY_DESCRIPTION), 'BLACKFRIDAY only refreshes the exact old seed text');
     console.log('✅ Two renames, ordered after CREATE TABLE.');
   }
@@ -76,13 +76,35 @@ async function run() {
     console.log('✅ Guarded by the old code and by the absence of the new one.');
   }
 
-  console.log('\n--- Test 3: nothing destructive, no seed re-insert ---');
+  console.log('\n--- Test 2b: one guarded retirement per demo coupon, after the renames ---');
+  {
+    assert.strictEqual(retirements.length, 2, 'exactly one retirement statement per demo coupon');
+    const lastRename = Math.max(...renames.map((r) => executed.indexOf(r)));
+    for (const r of retirements) {
+      assert.ok(executed.indexOf(r) > lastRename, 'retirement runs after the renames');
+      const sql = squash(r.sql);
+      assert.ok(/SET is_active = FALSE, description = \$1/i.test(sql), 'deactivates and replaces the description');
+      assert.ok(/WHERE UPPER\(code\) = \$2 AND description = \$3$/i.test(sql), 'matches the demo code AND its exact demo text');
+      assert.ok(!/\b(code|name|discount_value|discount_type|starts_at|ends_at|min_purchase_amount)\s*=\s*\$/i.test(sql.split('WHERE')[0]), 'sets only is_active and description');
+    }
+    assert.deepStrictEqual(
+      retirements.map((r) => r.params),
+      [
+        [db.RETIRED_DEMO_COUPON_DESCRIPTION, 'DEMO-ESTUDIO10', db.DEMO_COUPON_DESCRIPTIONS['DEMO-ESTUDIO10']],
+        [db.RETIRED_DEMO_COUPON_DESCRIPTION, 'DEMO-BLACKFRIDAY15', db.DEMO_COUPON_DESCRIPTIONS['DEMO-BLACKFRIDAY15']],
+      ]
+    );
+    console.log('✅ Two retirements, guarded by the exact demo text, ordered after the renames.');
+  }
+
+  console.log('\n--- Test 3: nothing destructive, no seed insert ---');
   {
     for (const e of executed) {
       const sql = squash(e.sql);
       assert.ok(!/\bDROP\b/i.test(sql), 'no DROP');
       assert.ok(!/\bTRUNCATE\b/i.test(sql), 'no TRUNCATE');
       assert.ok(!/DELETE FROM promotions/i.test(sql), 'no DELETE on promotions');
+      assert.ok(!/INSERT INTO promotions/i.test(sql), 'the empty seed inserts no coupon');
     }
     console.log('✅ Migration is additive.');
   }

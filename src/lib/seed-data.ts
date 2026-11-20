@@ -366,38 +366,9 @@ export const initialProducts: Product[] = [
   },
 ];
 
-export const initialPromotions: Promotion[] = [
-  {
-    id: 'b0000000-0000-4000-8000-000000000001',
-    code: 'DEMO-ESTUDIO10',
-    name: 'Descuento Especial Creativos y Arquitectos',
-    description:
-      '10% de descuento en estaciones de trabajo y monitores con el código DEMO-ESTUDIO10. Cupón de demostración: no es canjeable en ninguna tienda real.',
-    discount_type: 'percentage',
-    discount_value: 10.0,
-    min_purchase_amount: 300.0,
-    applies_to_category: null,
-    starts_at: '2026-10-01T00:00:00Z',
-    ends_at: '2026-12-31T23:59:59Z',
-    is_active: true,
-    created_at: '2026-10-16T12:00:00.000Z',
-  },
-  {
-    id: 'b0000000-0000-4000-8000-000000000002',
-    code: 'DEMO-BLACKFRIDAY15',
-    name: 'Campaña Black Friday Hardware Profesional',
-    description:
-      '15% de descuento en equipos seleccionados del 20 al 30 de noviembre con el código DEMO-BLACKFRIDAY15. Cupón de demostración: no es canjeable en ninguna tienda real.',
-    discount_type: 'percentage',
-    discount_value: 15.0,
-    min_purchase_amount: 500.0,
-    applies_to_category: null,
-    starts_at: '2026-11-20T00:00:00Z',
-    ends_at: '2026-11-30T23:59:59Z',
-    is_active: true,
-    created_at: '2026-10-16T12:00:00.000Z',
-  },
-];
+// No coupons: this store is an intermediary and publishes no coupon codes of its own. Coupons an admin
+// creates later are stored and shown as usual. The retired demo coupons are handled in db.ts.
+export const initialPromotions: Promotion[] = [];
 
 export const initialStoreSettings: StoreSettings = {
   id: 1,

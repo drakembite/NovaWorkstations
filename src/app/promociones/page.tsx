@@ -2,29 +2,21 @@ import React from 'react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { absoluteUrl, STORE_NAME } from '@/lib/catalog';
-import {
-  Tag,
-  Sparkles,
-  Calendar,
-  Percent,
-  ArrowRight,
-  ShieldAlert,
-  Flame,
-} from 'lucide-react';
+import { Tag, ArrowRight, Info } from 'lucide-react';
 import { Promotion } from '@/types/database';
 import { getPromotions } from '@/lib/db';
 import { CouponCard } from '@/components/CouponCard';
 import { getReferenceRate } from '@/lib/exchange-rate';
-import { now } from '@/lib/clock';
-import { COMMERCIAL_EVENTS, EVENT_STATUS_LABEL, eventStatus } from '@/lib/promo-events';
+import { DESTINATION_STORE_NOTE } from '@/lib/store-policy';
 
 const PAGE_PATH = '/promociones';
+const PAGE_TITLE = 'Promociones y ofertas';
 const PAGE_DESCRIPTION =
-  'Aprovecha nuestros cupones y promociones exclusivas en estaciones de trabajo, monitores y componentes de alto rendimiento.';
+  'Esta tienda no publica cupones propios. El precio final y las ofertas vigentes de cada producto los define la tienda de destino donde se completa la compra.';
 
 export const metadata: Metadata = {
   // The root layout title template appends the store name.
-  title: 'Promociones y Cupones Vigentes',
+  title: PAGE_TITLE,
   description: PAGE_DESCRIPTION,
   alternates: { canonical: absoluteUrl(PAGE_PATH) },
   openGraph: {
@@ -32,134 +24,67 @@ export const metadata: Metadata = {
     locale: 'es_PE',
     siteName: STORE_NAME,
     url: absoluteUrl(PAGE_PATH),
-    title: 'Promociones y Cupones Vigentes | ' + STORE_NAME,
+    title: PAGE_TITLE + ' | ' + STORE_NAME,
     description: PAGE_DESCRIPTION,
   },
 };
 
-// The event statuses depend on the current time, so the page must never be prerendered.
+// Coupons an admin activates must show at once, so the page is never prerendered.
 export const dynamic = 'force-dynamic';
 
 export default async function PromocionesPage() {
   let promotions: Promotion[] = [];
   try {
     const all = await getPromotions();
-    // Filter active promotions
     promotions = all.filter((p) => p.is_active);
   } catch (err) {
     console.warn('[Promociones] Error fetching promotions:', err);
   }
 
   // Server-side read, passed down as a plain number: null shows USD only.
-  const referenceRate = await getReferenceRate();
+  const referenceRate = promotions.length > 0 ? await getReferenceRate() : null;
   const rate = referenceRate ? referenceRate.rate : null;
-
-  // Statuses come from the event dates and the (injectable) clock, never from typed labels.
-  const at = now();
-  const events = COMMERCIAL_EVENTS.map((event) => ({ ...event, status: eventStatus(event, at) }));
 
   return (
     <div className="py-12 sm:py-16">
       <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
-        {/* Hero Header */}
         <div className="mb-12 text-center">
-          <div className="inline-flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-950/40 px-3 py-1 text-xs font-semibold text-amber-400">
-            <Flame className="h-3.5 w-3.5" />
-            <span>Beneficios Comerciales Exclusivos</span>
-          </div>
-          <h1 className="mt-4 text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
-            Cupones y Promociones Vigentes
-          </h1>
-          <p className="mt-3 text-base text-slate-400 sm:mx-auto sm:max-w-2xl">
-            Estos son los códigos y campañas de demostración que publica la tienda. Se muestran solo como información: aquí no se pueden canjear.
-          </p>
+          <h1 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">{PAGE_TITLE}</h1>
+          <p className="mt-3 text-base text-slate-400 sm:mx-auto sm:max-w-2xl">{PAGE_DESCRIPTION}</p>
         </div>
 
-        {/* Active Coupons Grid */}
-        <section>
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-2">
-              <Tag className="h-5 w-5 text-cyan-400" />
-              <h2 className="text-xl font-bold text-white">Cupones Disponibles</h2>
-            </div>
-            <span className="text-xs text-slate-400">
-              {promotions.length} cupón(es) activo(s)
-            </span>
+        <section className="rounded-2xl border border-slate-800 bg-slate-900/40 p-6 sm:p-8">
+          <div className="flex items-center gap-2 mb-4">
+            <Info className="h-5 w-5 text-cyan-400" />
+            <h2 className="text-xl font-bold text-white">Cómo ver el precio y las ofertas vigentes</h2>
           </div>
+          <ul className="list-disc list-inside space-y-2 text-sm text-slate-300">
+            <li>Cada ficha muestra un precio de referencia en dólares y su equivalente aproximado en soles.</li>
+            <li>
+              El botón «Comprar» lleva a la tienda de destino: allí se ven el precio final y cualquier descuento
+              vigente en ese momento.
+            </li>
+            <li>{DESTINATION_STORE_NOTE}</li>
+          </ul>
+        </section>
 
-          {promotions.length > 0 ? (
+        {promotions.length > 0 && (
+          <section className="mt-12">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-2">
+                <Tag className="h-5 w-5 text-cyan-400" />
+                <h2 className="text-xl font-bold text-white">Cupones vigentes</h2>
+              </div>
+              <span className="text-xs text-slate-400">{promotions.length} cupón(es) activo(s)</span>
+            </div>
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
               {promotions.map((promo) => (
                 <CouponCard key={promo.id} promotion={promo} rate={rate} />
               ))}
             </div>
-          ) : (
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-8 text-center text-slate-400">
-              <p>No hay cupones activos en este momento. Revisa nuestro calendario de eventos.</p>
-            </div>
-          )}
-        </section>
+          </section>
+        )}
 
-        {/* Commercial Events Calendar */}
-        <section className="mt-16">
-          <div className="flex items-center gap-2.5 mb-6">
-            <Calendar className="h-5 w-5 text-indigo-400" />
-            <div>
-              <h2 className="text-xl font-bold text-white">Calendario de Eventos Comerciales 2026</h2>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Fechas clave de rebajas anuales y campañas para estudios de diseño e ingeniería.
-              </p>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            {events.map((event, idx) => (
-              <div
-                key={idx}
-                className={`flex flex-col sm:flex-row sm:items-center justify-between rounded-xl border p-5 transition-all ${
-                  event.highlight
-                    ? 'border-indigo-500/40 bg-gradient-to-r from-slate-900/90 to-indigo-950/30'
-                    : 'border-slate-800 bg-slate-900/40'
-                }`}
-              >
-                <div className="flex-1">
-                  <div className="flex items-center gap-2.5">
-                    <span className="text-xs font-semibold text-slate-400 font-mono">
-                      {event.quarter}
-                    </span>
-                    <span
-                      data-event-status={event.status}
-                      className={`rounded px-2 py-0.5 text-[10px] font-bold ${
-                        event.status === 'current'
-                          ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                          : event.status === 'upcoming'
-                          ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-                          : 'bg-slate-800 text-slate-400'
-                      }`}
-                    >
-                      {EVENT_STATUS_LABEL[event.status]}
-                    </span>
-                  </div>
-                  <h3 className="mt-1.5 text-base font-bold text-white">{event.title}</h3>
-                  <p className="mt-1 text-xs text-slate-400">{event.description}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* Rules & Terms */}
-        <section className="mt-14 rounded-2xl border border-slate-800 bg-slate-900/30 p-6 sm:p-8">
-          <h3 className="text-base font-bold text-white mb-3">Términos y Condiciones de Cupones</h3>
-          <ul className="list-disc list-inside space-y-2 text-xs text-slate-400">
-            <li>Los cupones se publican solo como información y no se pueden canjear aquí.</li>
-            <li>No son transferibles a dinero en efectivo ni acumulables entre sí en una misma transacción.</li>
-            <li>El descuento se aplica sobre el subtotal de los productos aplicables, no sobre el costo de flete.</li>
-            <li>NovaWorkstations se reserva el derecho de dar por concluida una campaña anticipadamente en caso de agotamiento de inventario.</li>
-          </ul>
-        </section>
-
-        {/* CTA */}
         <div className="mt-12 text-center">
           <Link
             href="/categoria/estaciones-de-trabajo"

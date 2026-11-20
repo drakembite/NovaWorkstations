@@ -63,9 +63,11 @@ async function run() {
     console.log('\n--- Test 2: one warning per failed rename, without parameters or secrets ---');
     {
       const renameWarnings = warnings.filter((w) => w.startsWith('[DB] legacy demo coupon rename skipped:'));
+      const retirementWarnings = warnings.filter((w) => w.startsWith('[DB] demo coupon retirement skipped:'));
       assert.strictEqual(renameWarnings.length, 2, 'one warning per failed rename');
-      assert.strictEqual(warnings.length, 2, 'nothing else is logged');
-      for (const w of renameWarnings) {
+      assert.strictEqual(retirementWarnings.length, 2, 'one warning per failed retirement');
+      assert.strictEqual(warnings.length, 4, 'nothing else is logged');
+      for (const w of [...renameWarnings, ...retirementWarnings]) {
         assert.ok(w.includes('rename failed on the server'), 'the error message is logged');
         for (const e of executed.filter((x) => /UPDATE promotions/i.test(x.sql))) {
           for (const p of e.params ?? []) {
@@ -73,13 +75,13 @@ async function run() {
           }
         }
       }
-      console.log('✅ Two warnings, message only.');
+      console.log('✅ Four warnings (two renames, two retirements), message only.');
     }
 
     console.log('\n--- Test 3: nothing else in init is skipped ---');
     {
       const attempted = executed.filter((e) => /UPDATE promotions/i.test(e.sql));
-      assert.strictEqual(attempted.length, 2, 'both renames are attempted (the first failure does not stop the second)');
+      assert.strictEqual(attempted.length, 4, 'both renames and both retirements are attempted (one failure does not stop the next)');
       const lastRename = executed.lastIndexOf(attempted[attempted.length - 1]);
       const after = executed.slice(lastRename + 1);
       assert.ok(

@@ -1,5 +1,6 @@
-// Demo coupon codes: the seed carries the DEMO- prefixed codes, existing stores are migrated by an
-// additive rename (JSON fallback side), and the storefront and admin render the new codes.
+// Demo coupons: the seed no longer creates coupons; stores that still hold the old rows are migrated
+// by an additive rename (legacy codes -> DEMO- codes) and then a retirement (deactivated, demo text
+// replaced) on the JSON fallback side. The storefront shows none of them; the admin still lists them.
 // The Postgres side lives in test-demo-coupons-pg.ts (it needs a faked pool before the import).
 require.extensions['.css'] = () => {};
 
@@ -20,10 +21,37 @@ const OLD_ESTUDIO_DESCRIPTION =
   '10% de descuento directo en estaciones de trabajo y monitores aplicando el código en el carrito.';
 const OLD_BLACKFRIDAY_DESCRIPTION = '15% de descuento en equipos seleccionados del 20 al 30 de noviembre.';
 
+const DEMO_ESTUDIO_DESCRIPTION =
+  '10% de descuento en estaciones de trabajo y monitores con el código DEMO-ESTUDIO10. Cupón de demostración: no es canjeable en ninguna tienda real.';
+const DEMO_BLACKFRIDAY_DESCRIPTION =
+  '15% de descuento en equipos seleccionados del 20 al 30 de noviembre con el código DEMO-BLACKFRIDAY15. Cupón de demostración: no es canjeable en ninguna tienda real.';
+
 const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value));
 
+/** The two rows the seed used to create, as stores that ran it still hold them. */
+function demoPromotions(): Promotion[] {
+  const row = (id: string, code: string, description: string, value: number): Promotion => ({
+    id,
+    code,
+    name: `Demo ${code}`,
+    description,
+    discount_type: 'percentage',
+    discount_value: value,
+    min_purchase_amount: 300,
+    applies_to_category: null,
+    starts_at: '2026-10-01T00:00:00Z',
+    ends_at: '2026-12-31T23:59:59Z',
+    is_active: true,
+    created_at: '2026-10-16T12:00:00.000Z',
+  });
+  return [
+    row('b0000000-0000-4000-8000-000000000001', NEW_ESTUDIO, DEMO_ESTUDIO_DESCRIPTION, 10),
+    row('b0000000-0000-4000-8000-000000000002', NEW_BLACKFRIDAY, DEMO_BLACKFRIDAY_DESCRIPTION, 15),
+  ];
+}
+
 function legacyPromotions(): Promotion[] {
-  const promos = clone(initialPromotions);
+  const promos = demoPromotions();
   promos[0].code = OLD_ESTUDIO;
   promos[0].description = OLD_ESTUDIO_DESCRIPTION;
   promos[1].code = OLD_BLACKFRIDAY;
@@ -54,25 +82,11 @@ async function run() {
   // ---------------------------------------------------------------------
   // 1. Seed
   // ---------------------------------------------------------------------
-  console.log('\n--- Test 1: seed has exactly the two DEMO- codes and no cart wording ---');
+  console.log('\n--- Test 1: the seed creates no coupons ---');
   {
-    assert.deepStrictEqual(initialPromotions.map((p) => p.code), [NEW_ESTUDIO, NEW_BLACKFRIDAY]);
-    for (const p of initialPromotions) {
-      assert.ok(!/carrito/i.test(p.description), `${p.code}: description must not mention a cart`);
-      assert.ok(!/carrito/i.test(p.name), `${p.code}: name must not mention a cart`);
-      assert.ok(p.description.includes(p.code), `${p.code}: description names its own code`);
-      assert.ok(/demostraci[oó]n/i.test(p.description), `${p.code}: description says it is a demonstration coupon`);
-      assert.ok(/no es canjeable/i.test(p.description), `${p.code}: description says it cannot be redeemed`);
-    }
-    const [estudio, black] = initialPromotions;
-    assert.strictEqual(estudio.discount_value, 10);
-    assert.strictEqual(black.discount_value, 15);
-    assert.strictEqual(black.starts_at, '2026-11-20T00:00:00Z');
-    assert.strictEqual(black.ends_at, '2026-11-30T23:59:59Z');
-    assert.ok(/15%/.test(black.description) && /20 al 30 de noviembre/.test(black.description), 'BLACKFRIDAY keeps its percentage and dates');
-    assert.ok(/10%/.test(estudio.description), 'ESTUDIO keeps its percentage');
+    assert.deepStrictEqual(initialPromotions, []);
     assert.strictEqual(initialProducts.length, 12, 'the products are untouched');
-    console.log('✅ Seed carries DEMO-ESTUDIO10 and DEMO-BLACKFRIDAY15 and nothing about a cart.');
+    console.log('✅ The seed has no coupons.');
   }
 
   // ---------------------------------------------------------------------
@@ -109,13 +123,12 @@ async function run() {
     const fresh = legacyPromotions();
     assert.strictEqual(db.renameLegacyDemoCoupons(fresh), true);
     assert.deepStrictEqual(fresh.map((p) => p.code), [NEW_ESTUDIO, NEW_BLACKFRIDAY]);
-    assert.strictEqual(fresh[0].description, initialPromotions[0].description);
-    assert.strictEqual(fresh[1].description, initialPromotions[1].description);
+    assert.strictEqual(fresh[0].description, DEMO_ESTUDIO_DESCRIPTION);
+    assert.strictEqual(fresh[1].description, DEMO_BLACKFRIDAY_DESCRIPTION);
     // Everything else on the row is untouched, ids included.
+    const demo = demoPromotions();
     for (const i of [0, 1]) {
-      const { code: _c, description: _d, ...rest } = fresh[i];
-      const { code: _c2, description: _d2, ...restSeed } = initialPromotions[i];
-      assert.deepStrictEqual(rest, restSeed, 'only code and the untouched seed description change');
+      assert.deepStrictEqual(fresh[i], demo[i], 'only code and the untouched seed description change');
     }
 
     // Idempotent: the second run changes nothing and reports nothing.
@@ -167,6 +180,56 @@ async function run() {
   }
 
   // ---------------------------------------------------------------------
+  // 2b. The pure retirement: matching rules and idempotency
+  // ---------------------------------------------------------------------
+  console.log('\n--- Test 2b: retirement rules ---');
+  {
+    assert.deepStrictEqual(db.DEMO_COUPON_DESCRIPTIONS, {
+      [NEW_ESTUDIO]: DEMO_ESTUDIO_DESCRIPTION,
+      [NEW_BLACKFRIDAY]: DEMO_BLACKFRIDAY_DESCRIPTION,
+    });
+    assert.ok(!/demostraci[oó]n|DEMO-|\d+\s*%/i.test(db.RETIRED_DEMO_COUPON_DESCRIPTION), 'the retired text names no code and no discount');
+
+    // Both demo rows: deactivated, demo text replaced, everything else untouched.
+    const rows = demoPromotions();
+    assert.strictEqual(db.retireDemoCoupons(rows), true);
+    const demo = demoPromotions();
+    for (const i of [0, 1]) {
+      assert.deepStrictEqual(rows[i], { ...demo[i], is_active: false, description: db.RETIRED_DEMO_COUPON_DESCRIPTION });
+    }
+
+    // Runs once: a row an admin turns back on afterwards stays on.
+    rows[0].is_active = true;
+    const snapshot = clone(rows);
+    assert.strictEqual(db.retireDemoCoupons(rows), false, 'second run reports no change');
+    assert.deepStrictEqual(rows, snapshot, 'the re-activated row is left on');
+
+    // An edited description means an admin owns the row: it is left alone.
+    const edited = demoPromotions();
+    edited[0].description = 'Texto editado por un administrador.';
+    assert.strictEqual(db.retireDemoCoupons(edited), true);
+    assert.strictEqual(edited[0].is_active, true);
+    assert.strictEqual(edited[0].description, 'Texto editado por un administrador.');
+    assert.strictEqual(edited[1].is_active, false, 'the untouched demo row is still retired');
+
+    // Matching needs both the demo code (case-insensitive) and its exact demo text.
+    const lower = demoPromotions();
+    lower[0].code = 'demo-estudio10';
+    assert.strictEqual(db.retireDemoCoupons(lower), true);
+    assert.strictEqual(lower[0].is_active, false);
+    const swapped = [adminPromo('VERANO20', DEMO_ESTUDIO_DESCRIPTION), adminPromo(NEW_ESTUDIO), adminPromo('OTOÑO5')];
+    const swappedBefore = clone(swapped);
+    assert.strictEqual(db.retireDemoCoupons(swapped), false, 'demo text on another code, or a demo code with other text, is not retired');
+    assert.deepStrictEqual(swapped, swappedBefore);
+
+    // Nothing is deleted.
+    const counted = [...demoPromotions(), adminPromo('VERANO20')];
+    db.retireDemoCoupons(counted);
+    assert.strictEqual(counted.length, 3);
+    console.log('✅ Retirement deactivates only the untouched demo rows, deletes nothing and runs once.');
+  }
+
+  // ---------------------------------------------------------------------
   // 3. JSON fallback end to end (fresh process state, temp cwd)
   // ---------------------------------------------------------------------
   console.log('\n--- Test 3: JSON store migrates on first read and persists ---');
@@ -187,16 +250,21 @@ async function run() {
       'the rename is persisted, order and the admin row preserved'
     );
     assert.strictEqual(onDisk.promotions[2].description, 'Created by an admin.');
-    assert.strictEqual(onDisk.promotions[0].id, initialPromotions[0].id, 'ids are stable');
+    assert.strictEqual(onDisk.promotions[2].is_active, true, 'the admin row stays active');
+    assert.strictEqual(onDisk.promotions[0].id, 'b0000000-0000-4000-8000-000000000001', 'ids are stable');
+    for (const row of onDisk.promotions.slice(0, 2)) {
+      assert.strictEqual(row.is_active, false, `${row.code}: renamed, then retired`);
+      assert.strictEqual(row.description, db.RETIRED_DEMO_COUPON_DESCRIPTION, `${row.code}: carries the retired text`);
+    }
 
     const again = await freshDb.getPromotions();
     assert.deepStrictEqual(again, promos, 'a second read is a no-op');
-    console.log('✅ The JSON store renames on first read, persists, keeps admin rows and is idempotent.');
+    console.log('✅ The JSON store renames and retires on first read, persists, keeps admin rows and is idempotent.');
 
     // ---------------------------------------------------------------
-    // 4. Storefront and admin render the new codes
+    // 4. The storefront shows no retired coupon; the admin still lists them
     // ---------------------------------------------------------------
-    console.log('\n--- Test 4: promotions page and admin render the DEMO- codes ---');
+    console.log('\n--- Test 4: promotions page hides the retired coupons, admin lists them ---');
     {
       const { renderToStaticMarkup } = await import('react-dom/server');
       // Offline: no test reaches the BCRP.
@@ -207,10 +275,9 @@ async function run() {
       });
       const Promociones = (await import('../src/app/promociones/page')).default;
       const html = renderToStaticMarkup((await Promociones()) as React.ReactElement);
-      assert.ok(html.includes(NEW_ESTUDIO), 'promotions page lists DEMO-ESTUDIO10');
-      assert.ok(html.includes(NEW_BLACKFRIDAY), 'promotions page lists DEMO-BLACKFRIDAY15 (card and event)');
-      assert.ok(!/(?<!DEMO-)\bESTUDIO10\b/.test(html), 'no bare ESTUDIO10 on the promotions page');
-      assert.ok(!/(?<!DEMO-)\bBLACKFRIDAY15\b/.test(html), 'no bare BLACKFRIDAY15 on the promotions page');
+      assert.ok(!/ESTUDIO10|BLACKFRIDAY15/.test(html), 'the promotions page shows none of the retired codes');
+      assert.ok(!/demostraci[oó]n|canjeable/i.test(html), 'no demo or unredeemable-coupon wording');
+      assert.ok(html.includes('VERANO20'), 'an active admin coupon is still listed');
       assert.ok(!/carrito/i.test(html.replace(/<[^>]+>/g, ' ')), 'no promotion text sends people to a cart');
 
       const AdminPage = (await import('../src/app/admin/promociones/page')).default;
@@ -218,12 +285,7 @@ async function run() {
       assert.ok(adminHtml.includes(NEW_ESTUDIO) && adminHtml.includes(NEW_BLACKFRIDAY), 'admin lists the new codes');
       assert.ok(!/(?<!DEMO-)\bESTUDIO10\b/.test(adminHtml), 'no bare ESTUDIO10 in the admin');
       assert.ok(!/(?<!DEMO-)\bBLACKFRIDAY15\b/.test(adminHtml), 'no bare BLACKFRIDAY15 in the admin');
-
-      const { COMMERCIAL_EVENTS } = await import('../src/lib/promo-events');
-      const blackEvent = COMMERCIAL_EVENTS.find((e) => /Black Friday/.test(e.title))!;
-      assert.ok(blackEvent.description.includes(NEW_BLACKFRIDAY), 'the Black Friday event names the DEMO- code');
-      assert.ok(!/(?<!DEMO-)BLACKFRIDAY15/.test(blackEvent.description));
-      console.log('✅ Storefront and admin show only the DEMO- codes.');
+      console.log('✅ The storefront hides the retired coupons; the admin still lists them to turn back on.');
     }
   } finally {
     process.chdir(originalCwd);
