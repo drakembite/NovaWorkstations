@@ -30,6 +30,14 @@ export function getBaseUrl(request: Request): string {
 
 export const STORE_NAME = 'NovaWorkstations';
 
+/**
+ * When the storefront templates or copy last changed (home, category and product pages).
+ * A template change alters every rendered page, so the sitemap reports each URL as modified
+ * at the later of this date and its own data change. Update it in the same commit as any
+ * visible storefront change; leave it alone for changes that do not alter rendered pages.
+ */
+export const STOREFRONT_UPDATED_AT = '2026-11-23T00:00:00.000Z';
+
 /** Deployed domain, used when NEXT_PUBLIC_SITE_URL is not set. */
 export const DEFAULT_SITE_URL = 'https://planiaula.com';
 

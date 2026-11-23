@@ -5,6 +5,7 @@ import { GET as getProductBySlugJson } from '../src/app/productos/[slug].json/ro
 import { GET as getSitemapXml } from '../src/app/sitemap.xml/route';
 import { GET as getRobotsTxt } from '../src/app/robots.txt/route';
 import { getProducts } from '../src/lib/db';
+import { STOREFRONT_UPDATED_AT } from '../src/lib/catalog';
 
 async function testEndpoints() {
   console.log('🧪 Starting Public E-Commerce Endpoints Tests...');
@@ -225,14 +226,27 @@ async function testEndpoints() {
       assert.ok(xml.includes(`<loc>${page}</loc>`), `Sitemap must contain static page: ${page}`);
     }
 
+    // Every URL carries a lastmod: the latest of its own data change and the last storefront
+    // change, since a template change alters every rendered page.
+    const lastmodOf = (loc: string) => {
+      const match = xml.match(
+        new RegExp(`<loc>${loc.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}</loc>\\s*<lastmod>([^<]+)</lastmod>`)
+      );
+      return match ? match[1] : undefined;
+    };
+    const storefront = new Date(STOREFRONT_UPDATED_AT).getTime();
+    const newestProduct = Math.max(...dbProducts.map((p) => new Date(p.updated_at).getTime()));
+    const expectedStatic = new Date(Math.max(storefront, newestProduct)).toISOString();
+    for (const page of expectedStaticPages) {
+      assert.strictEqual(lastmodOf(page), expectedStatic, `Sitemap lastmod for static page ${page}`);
+    }
+
     // Verify dynamic products
     for (const prod of dbProducts) {
       const prodUrl = `https://novaworkstations.com/productos/${prod.slug}`;
       assert.ok(xml.includes(`<loc>${prodUrl}</loc>`), `Sitemap must contain product: ${prodUrl}`);
-      assert.ok(
-        xml.includes(`<lastmod>${new Date(prod.updated_at).toISOString()}</lastmod>`),
-        `Sitemap must include lastmod for product: ${prod.slug}`
-      );
+      const expected = new Date(Math.max(storefront, new Date(prod.updated_at).getTime())).toISOString();
+      assert.strictEqual(lastmodOf(prodUrl), expected, `Sitemap lastmod for product: ${prod.slug}`);
     }
 
     console.log(`✅ /sitemap.xml contains 9 static pages and ${dbProducts.length} dynamic products`);
