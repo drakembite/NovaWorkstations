@@ -144,6 +144,15 @@ async function testCatalogSsr() {
     assert.ok(homeElement, 'HomePage must return a valid React element');
     assert.ok(React.isValidElement(homeElement), 'HomePage output must be a valid React element');
 
+    // Every product must be reachable from the home page, so a crawler finds it from the
+    // most-crawled page and not only from the sitemap.
+    const homeCardSlugs = new Set(
+      findElements(homeElement, (el) => el.type === ProductCard).map((el) => el.props.product.slug)
+    );
+    for (const product of allProducts) {
+      assert.ok(homeCardSlugs.has(product.slug), `Home page must link to product ${product.slug}`);
+    }
+
     console.log('✅ Home Page SSR component verified.');
   }
 
@@ -200,6 +209,22 @@ async function testCatalogSsr() {
     });
     assert.ok(detailElement, 'ProductDetailPage must render');
     assert.ok(React.isValidElement(detailElement));
+
+    // The product page links to every other product of the catalog, and never to itself.
+    const productLinks = new Set(
+      findElements(
+        detailElement,
+        (el) => typeof el.props?.href === 'string' && el.props.href.startsWith('/productos/')
+      ).map((el) => el.props.href)
+    );
+    for (const other of allProducts) {
+      const href = `/productos/${other.slug}`;
+      if (other.slug === sampleProduct.slug) {
+        assert.ok(!productLinks.has(href), 'Product page must not link to itself');
+      } else {
+        assert.ok(productLinks.has(href), `Product page must link to other product ${other.slug}`);
+      }
+    }
 
     // Generate metadata
     const detailMeta = await generateProductMetadata({

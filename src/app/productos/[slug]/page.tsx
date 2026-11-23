@@ -14,7 +14,7 @@ import {
   Layers,
   Sparkles,
 } from 'lucide-react';
-import { getProductBySlug } from '@/lib/db';
+import { getProductBySlug, getProducts } from '@/lib/db';
 import {
   normalizeCategorySlug,
   absoluteUrl,
@@ -88,6 +88,14 @@ export default async function ProductDetailPage(props: ProductPageProps) {
   // Read on the server and passed down as plain values: null shows USD only, nothing else.
   const reference = await getReferenceRate();
   const rate = reference ? reference.rate : null;
+
+  // Every other product of the catalog, same category first, so each page links to the rest.
+  const otherProducts = (await getProducts())
+    .filter((p) => p.slug !== product.slug)
+    .sort(
+      (a, b) =>
+        Number(b.category === product.category) - Number(a.category === product.category)
+    );
 
   const discountPercentage = hasDiscount
     ? Math.round(
@@ -379,6 +387,26 @@ export default async function ProductDetailPage(props: ProductPageProps) {
           )}
         </div>
       </section>
+
+      {/* 5. Other products of the catalog */}
+      {otherProducts.length > 0 && (
+        <section className="mt-16 border-t border-slate-800 pt-12">
+          <h2 className="text-xl font-bold tracking-tight text-white">Otros equipos del catálogo</h2>
+          <ul className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {otherProducts.map((other) => (
+              <li key={other.id}>
+                <Link
+                  href={`/productos/${other.slug}`}
+                  className="flex h-full flex-col rounded-xl border border-slate-800 bg-slate-900/50 px-4 py-3 text-sm transition-colors hover:border-cyan-500/40"
+                >
+                  <span className="font-semibold text-slate-200">{other.title}</span>
+                  <span className="mt-0.5 text-xs text-slate-400">{other.category}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </div>
   );
 }

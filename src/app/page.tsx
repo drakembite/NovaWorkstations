@@ -84,8 +84,8 @@ export default async function HomePage() {
   const referenceRate = await getReferenceRate();
   const rate = referenceRate ? referenceRate.rate : null;
 
-  // Destacados: Workstations & high-performance gear
-  const featuredProducts = allProducts.slice(0, 8);
+  // The whole catalog: every product stays one link away from the home page.
+  const featuredProducts = allProducts;
 
   // Ofertas y Liquidación
   const dealsProducts = allProducts.filter(
@@ -206,7 +206,7 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* 3. Equipos Destacados Grid */}
+      {/* 3. Full catalog grid */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 w-full">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
           <div>
@@ -217,7 +217,7 @@ export default async function HomePage() {
               </span>
             </div>
             <h2 className="mt-1 text-2xl font-extrabold tracking-tight text-white sm:text-3xl">
-              Equipos Destacados
+              Catálogo completo
             </h2>
             <p className="mt-1 text-sm text-slate-400">
               Hardware de máxima fiabilidad, listo para comprar en la tienda de destino.
